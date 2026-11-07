@@ -1,0 +1,377 @@
+{
+  "questions": [
+    {
+      "id": "1",
+      "namespace": "drill-variation-a",
+      "machineHostname": "ckad9999",
+      "question": "The orders team reports that requests to `http://web:80/` from Pods in namespace `drill-variation-a` fail. The platform team says the `web` frontend itself looks healthy. The frontend is serving live traffic for other consumers, so its running Pods must not be restarted or replaced while you fix this. A second workload, the `report` Deployment, shares the namespace and must not be disturbed.\n\n1. Make `http://web:80/` work from inside the namespace.\n2. Only `web` Pods must answer on that name, and the load must be spread across all three `web` Pods.\n3. You may change anything in the namespace EXCEPT the `web` Deployment: its generation must stay unchanged and the three running `web` Pods must keep running with their current identities - do not restart, delete or replace them. Fix the Service, not the Deployment.",
+      "concepts": [
+        "services",
+        "selectors",
+        "endpoints",
+        "endpointslices",
+        "troubleshooting"
+      ],
+      "verification": [
+        {
+          "id": "1",
+          "description": "Service web selector matches the web Pod labels exactly",
+          "verificationScriptFile": "q1_s1_validate_service_selector.sh",
+          "expectedOutput": "0",
+          "weightage": 3
+        },
+        {
+          "id": "2",
+          "description": "Deployment web generation is unchanged and the 3 web Pods were not restarted/replaced",
+          "verificationScriptFile": "q1_s2_validate_pods_untouched.sh",
+          "expectedOutput": "0",
+          "weightage": 3
+        },
+        {
+          "id": "3",
+          "description": "3 ready endpoints behind web and http://web:80/ answers from inside the namespace",
+          "verificationScriptFile": "q1_s3_validate_endpoints_traffic.sh",
+          "expectedOutput": "0",
+          "weightage": 4
+        }
+      ]
+    },
+    {
+      "id": "2",
+      "namespace": "drill-variation-b",
+      "machineHostname": "ckad9999",
+      "question": "After a change last night, requests to `http://web:80/` from Pods in namespace `drill-variation-b` fail. The `web` Pods exist and are not crashing, and a Service named `web` is in place. This team's rule: **an unhealthy `web` Pod must never receive traffic** - whatever you do, that guarantee stays in place. The `report` Deployment shares the namespace; leave it alone.\n\n1. Make `http://web:80/` work from inside the namespace - all three `web` Pods must become Ready and receive traffic.\n2. The readiness check must REMAIN defined on the Deployment: you may change what it checks, but you may not remove it. Do not set `publishNotReadyAddresses` on the Service.\n3. Hint: use the Pod's logs and a test request to find a path the app actually answers on.",
+      "concepts": [
+        "readiness probes",
+        "probes",
+        "services",
+        "endpoints",
+        "troubleshooting"
+      ],
+      "verification": [
+        {
+          "id": "1",
+          "description": "Deployment web still defines a readinessProbe and it now checks path / on port 80",
+          "verificationScriptFile": "q2_s1_validate_probe.sh",
+          "expectedOutput": "0",
+          "weightage": 3
+        },
+        {
+          "id": "2",
+          "description": "Service web does not set publishNotReadyAddresses",
+          "verificationScriptFile": "q2_s2_validate_publishnotready.sh",
+          "expectedOutput": "0",
+          "weightage": 2
+        },
+        {
+          "id": "3",
+          "description": "All 3 web Pods are Ready and the EndpointSlice lists 3 ready addresses",
+          "verificationScriptFile": "q2_s3_validate_ready_endpoints.sh",
+          "expectedOutput": "0",
+          "weightage": 3
+        },
+        {
+          "id": "4",
+          "description": "http://web:80/ answers from inside the namespace",
+          "verificationScriptFile": "q2_s4_validate_traffic.sh",
+          "expectedOutput": "0",
+          "weightage": 2
+        }
+      ]
+    },
+    {
+      "id": "3",
+      "namespace": "logging",
+      "machineHostname": "ckad9999",
+      "question": "In namespace `logging` create a DaemonSet named `log-shipper` that runs a log-shipping agent on every node of the cluster:\n\n1. Pod template label `app=log-shipper` - the selector must match it.\n2. Container named `agent`, image `busybox:1.36`, running `sh -c 'while true; do sleep 3600; done'`.\n3. Exactly one `log-shipper` pod must run on every node, including the control-plane node.\n4. Wait until all pods are Running.",
+      "concepts": [
+        "daemonsets",
+        "scheduling",
+        "labels",
+        "selectors"
+      ],
+      "verification": [
+        {
+          "id": "1",
+          "description": "DaemonSet log-shipper exists with matching selector/template labels and the required container",
+          "verificationScriptFile": "q3_s1_validate_spec.sh",
+          "expectedOutput": "0",
+          "weightage": 4
+        },
+        {
+          "id": "2",
+          "description": "One log-shipper pod runs on every node of the cluster",
+          "verificationScriptFile": "q3_s2_validate_per_node.sh",
+          "expectedOutput": "0",
+          "weightage": 4
+        },
+        {
+          "id": "3",
+          "description": "All log-shipper pods are Running",
+          "verificationScriptFile": "q3_s3_validate_running.sh",
+          "expectedOutput": "0",
+          "weightage": 2
+        }
+      ]
+    },
+    {
+      "id": "4",
+      "namespace": "image-security",
+      "machineHostname": "ckad9999",
+      "question": "In namespace `image-security` the Deployment `web` must authenticate to a private registry for future image pulls.\n\n1. Create a Secret named `private-reg-cred` of type `kubernetes.io/dockerconfigjson` for registry `myprivateregistry.com:5000` with username `dock_user`, password `dock_password` and email `dock_user@myprivateregistry.com`.\n2. Configure the Deployment `web` to use this Secret as an `imagePullSecret`.\n3. Do NOT change the Deployment's image - it must stay `nginx:1.27` and keep running.",
+      "concepts": [
+        "secrets",
+        "imagepullsecrets",
+        "docker registry",
+        "deployments"
+      ],
+      "verification": [
+        {
+          "id": "1",
+          "description": "Secret private-reg-cred is a dockerconfigjson secret for myprivateregistry.com:5000 with the required credentials",
+          "verificationScriptFile": "q4_s1_validate_secret.sh",
+          "expectedOutput": "0",
+          "weightage": 4
+        },
+        {
+          "id": "2",
+          "description": "Deployment web uses private-reg-cred as an imagePullSecret",
+          "verificationScriptFile": "q4_s2_validate_imagepullsecrets.sh",
+          "expectedOutput": "0",
+          "weightage": 3
+        },
+        {
+          "id": "3",
+          "description": "Deployment web still runs image nginx:1.27 and is fully ready",
+          "verificationScriptFile": "q4_s3_validate_image_ready.sh",
+          "expectedOutput": "0",
+          "weightage": 3
+        }
+      ]
+    },
+    {
+      "id": "5",
+      "namespace": "maintenance",
+      "machineHostname": "ckad9999",
+      "question": "Node `k3d-cluster-agent-1` needs maintenance. In namespace `maintenance` the Deployment `critical-db` (3 replicas) runs the critical database, and a completed Job named `maintenance-marker` placed its pod on that node.\n\n1. Create a PodDisruptionBudget named `critical-db-pdb` for the `critical-db` Pods with `minAvailable: 2`, so maintenance can never take more than one replica down at a time.\n2. Cordon `k3d-cluster-agent-1`, then drain it. The drain must succeed despite DaemonSet-managed pods - use the appropriate `kubectl drain` flags.\n3. Confirm the `maintenance-marker` pod has been evicted (it is never recreated).\n4. Uncordon the node so it is schedulable again.\n5. `critical-db` must end up with 3 ready replicas.",
+      "concepts": [
+        "poddisruptionbudgets",
+        "node drain",
+        "cordon",
+        "eviction",
+        "cluster maintenance"
+      ],
+      "verification": [
+        {
+          "id": "1",
+          "description": "PodDisruptionBudget critical-db-pdb exists with minAvailable 2 selecting the critical-db pods",
+          "verificationScriptFile": "q5_s1_validate_pdb.sh",
+          "expectedOutput": "0",
+          "weightage": 3
+        },
+        {
+          "id": "2",
+          "description": "Node k3d-cluster-agent-1 is schedulable (not cordoned)",
+          "verificationScriptFile": "q5_s2_validate_uncordon.sh",
+          "expectedOutput": "0",
+          "weightage": 2
+        },
+        {
+          "id": "3",
+          "description": "maintenance-marker pods were evicted (none remain)",
+          "verificationScriptFile": "q5_s3_validate_marker.sh",
+          "expectedOutput": "0",
+          "weightage": 2
+        },
+        {
+          "id": "4",
+          "description": "Deployment critical-db runs 3 ready replicas",
+          "verificationScriptFile": "q5_s4_validate_ready.sh",
+          "expectedOutput": "0",
+          "weightage": 3
+        }
+      ]
+    },
+    {
+      "id": "6",
+      "namespace": "admin1401",
+      "machineHostname": "ckad9999",
+      "question": "In namespace `admin1401` a Secret named `dotfile-secret` already exists. Create a Pod named `secret-1401`:\n\n1. Image `busybox:1.36`, container named `secret-admin`, command `sleep 4800`.\n2. Mount the Secret `dotfile-secret` as a **read-only** volume named `secret-volume` at `/etc/secret-volume`.\n3. Schedule the pod on node `k3d-cluster-agent-0` (add a nodeSelector).\n4. The pod must be Running.",
+      "concepts": [
+        "secrets",
+        "volumes",
+        "volume mounts",
+        "node selector"
+      ],
+      "verification": [
+        {
+          "id": "1",
+          "description": "Pod secret-1401 mounts secret dotfile-secret as read-only volume secret-volume at /etc/secret-volume",
+          "verificationScriptFile": "q6_s1_validate_mount.sh",
+          "expectedOutput": "0",
+          "weightage": 4
+        },
+        {
+          "id": "2",
+          "description": "Pod secret-1401 has nodeSelector kubernetes.io/hostname=k3d-cluster-agent-0",
+          "verificationScriptFile": "q6_s2_validate_node.sh",
+          "expectedOutput": "0",
+          "weightage": 2
+        },
+        {
+          "id": "3",
+          "description": "Pod secret-1401 is Running with container secret-admin (busybox:1.36) and the mounted secret files exist",
+          "verificationScriptFile": "q6_s3_validate_running.sh",
+          "expectedOutput": "0",
+          "weightage": 4
+        }
+      ]
+    },
+    {
+      "id": "7",
+      "namespace": "admin2406",
+      "machineHostname": "ckad9999",
+      "question": "Export the deployment inventory of namespace `admin2406` to the file `/tmp/exam/outputs/admin2406_data` on `ckad9999`.\n\n1. Use kubectl **custom-columns** output with exactly these columns, in this order: `DEPLOYMENT` (`.metadata.name`), `CONTAINER_IMAGE` (`.spec.template.spec.containers[].image`), `READY_REPLICAS` (`.status.readyReplicas`), `NAMESPACE` (`.metadata.namespace`).\n2. Rows must be sorted by deployment name (ascending).\n3. The file must contain the column header row.",
+      "concepts": [
+        "kubectl",
+        "custom columns",
+        "json output",
+        "sorting"
+      ],
+      "verification": [
+        {
+          "id": "1",
+          "description": "File exists with the exact header row DEPLOYMENT CONTAINER_IMAGE READY_REPLICAS NAMESPACE",
+          "verificationScriptFile": "q7_s1_validate_header.sh",
+          "expectedOutput": "0",
+          "weightage": 3
+        },
+        {
+          "id": "2",
+          "description": "Every row matches the live state of the admin2406 deployments (name, image, ready replicas, namespace)",
+          "verificationScriptFile": "q7_s2_validate_content.sh",
+          "expectedOutput": "0",
+          "weightage": 5
+        },
+        {
+          "id": "3",
+          "description": "Rows are sorted by deployment name ascending",
+          "verificationScriptFile": "q7_s3_validate_sorted.sh",
+          "expectedOutput": "0",
+          "weightage": 2
+        }
+      ]
+    },
+    {
+      "id": "8",
+      "namespace": "alpha",
+      "machineHostname": "ckad9999",
+      "question": "The Deployment `alpha-mysql` in namespace `alpha` was deployed with a PersistentVolume already provisioned for it, but its Pods are not running.\n\n1. Inspect the Pod's events and the PersistentVolume `alpha-pv` to find what is missing.\n2. Create the PersistentVolumeClaim `mysql-alpha-pvc` so it claims storage from `alpha-pv` - match the PV's capacity, access mode and storage class.\n3. Do NOT alter the PersistentVolume `alpha-pv`.\n4. Once the claim binds, the Pod must run with the volume mounted at `/var/lib/mysql` (already configured in the Deployment).",
+      "concepts": [
+        "persistentvolumeclaims",
+        "persistentvolumes",
+        "storage",
+        "troubleshooting"
+      ],
+      "verification": [
+        {
+          "id": "1",
+          "description": "PVC mysql-alpha-pvc exists with 1Gi ReadWriteOnce on storage class slow",
+          "verificationScriptFile": "q8_s1_validate_pvc.sh",
+          "expectedOutput": "0",
+          "weightage": 3
+        },
+        {
+          "id": "2",
+          "description": "PVC mysql-alpha-pvc is Bound to alpha-pv",
+          "verificationScriptFile": "q8_s2_validate_bound.sh",
+          "expectedOutput": "0",
+          "weightage": 3
+        },
+        {
+          "id": "3",
+          "description": "Deployment alpha-mysql is Ready, the pod runs, and alpha-pv is unaltered",
+          "verificationScriptFile": "q8_s3_validate_pod_running.sh",
+          "expectedOutput": "0",
+          "weightage": 4
+        }
+      ]
+    },
+    {
+      "id": "9",
+      "namespace": "cyan-ns",
+      "machineHostname": "ckad9999",
+      "question": "In namespace `cyan-ns` the nginx app behind Service `cyan-svc` (port `80`) must only be accessible from the Pod `cyan-white`. Right now the app is **not accessible from anywhere**.\n\n1. Fix the NetworkPolicy `cyan-np` so that only Pods labeled `client=white` in this namespace can reach the app on port `80`; `cyan-black` must not be able to reach it.\n2. You may edit the policy but you must NOT delete it, and it must keep selecting the `cyan-app` Pods.\n3. Verify `cyan-white` can reach `http://cyan-svc:80/`.",
+      "concepts": [
+        "networkpolicies",
+        "network policy",
+        "selectors",
+        "troubleshooting"
+      ],
+      "verification": [
+        {
+          "id": "1",
+          "description": "NetworkPolicy cyan-np still exists, selects app=cyan-app and declares Ingress",
+          "verificationScriptFile": "q9_s1_validate_exists.sh",
+          "expectedOutput": "0",
+          "weightage": 2
+        },
+        {
+          "id": "2",
+          "description": "Ingress rule allows port 80",
+          "verificationScriptFile": "q9_s2_validate_port.sh",
+          "expectedOutput": "0",
+          "weightage": 2
+        },
+        {
+          "id": "3",
+          "description": "Ingress from is constrained to client=white pods (namespaceSelector+podSelector combined, nothing broader)",
+          "verificationScriptFile": "q9_s3_validate_from.sh",
+          "expectedOutput": "0",
+          "weightage": 4
+        },
+        {
+          "id": "4",
+          "description": "cyan-white can reach http://cyan-svc:80/",
+          "verificationScriptFile": "q9_s4_validate_traffic.sh",
+          "expectedOutput": "0",
+          "weightage": 2
+        }
+      ]
+    },
+    {
+      "id": "10",
+      "namespace": "init-ex",
+      "machineHostname": "ckad9999",
+      "question": "In namespace `init-ex` create a Pod named `init-demo`:\n\n1. Main container named `app`, image `nginx:1.27`.\n2. An **init container** named `init-setup`, image `busybox:1.36`, running `sh -c 'echo preparing; sleep 10'` - it must complete before the main container starts.\n3. Label the Pod `app=init-demo`.\n4. Schedule the Pod on node `k3d-cluster-agent-0` (add a nodeSelector).\n5. The Pod must be Running and Ready.",
+      "concepts": [
+        "init containers",
+        "pod lifecycle",
+        "node selector"
+      ],
+      "verification": [
+        {
+          "id": "1",
+          "description": "Pod init-demo has init container init-setup (busybox:1.36) running 'echo preparing; sleep 10'",
+          "verificationScriptFile": "q10_s1_validate_init.sh",
+          "expectedOutput": "0",
+          "weightage": 4
+        },
+        {
+          "id": "2",
+          "description": "Pod init-demo has nodeSelector kubernetes.io/hostname=k3d-cluster-agent-0",
+          "verificationScriptFile": "q10_s2_validate_node.sh",
+          "expectedOutput": "0",
+          "weightage": 2
+        },
+        {
+          "id": "3",
+          "description": "Init container completed and the app container (nginx:1.27) is Running with the Pod Ready",
+          "verificationScriptFile": "q10_s3_validate_running.sh",
+          "expectedOutput": "0",
+          "weightage": 4
+        }
+      ]
+    }
+  ]
+}

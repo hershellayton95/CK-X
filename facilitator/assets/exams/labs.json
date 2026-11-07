@@ -141,6 +141,16 @@
       "examDurationInMinutes": 90
     },
     {
+      "id": "cka-007",
+      "assetPath": "assets/exams/cka/007",
+      "name": "CKA Mixed-Source Lab - kubeskills & KodeKloud",
+      "category": "CKA",
+      "description": "Mixed-source CKA lab: 2 questions adapted from the MIT-licensed kubeskills/cka-under-pressure KubeCon talk kit (credited to kubeskills) plus 8 from the KodeKloud CKA course notes (credited to KodeKloud) and theplatformlab Mock Exam 01 (credited to theplatformlab): service selector and readiness-probe troubleshooting under no-restart constraints, DaemonSet creation, imagePullSecrets, PodDisruptionBudget-protected node drain, read-only secret volume mounts, custom-columns file output, missing-PVC diagnosis, NetworkPolicy AND-rule repair, and init containers.",
+      "warmUpTimeInSeconds": 260,
+      "difficulty": "Hard",
+      "examDurationInMinutes": 90
+    },
+    {
       "id": "cka-001",
       "assetPath": "assets/exams/cka/001",
       "name": "CKA Practice Lab - Core Concepts",
