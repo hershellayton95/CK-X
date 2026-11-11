@@ -337,8 +337,8 @@ document.addEventListener('DOMContentLoaded', function() {
             examNameSelect.appendChild(option);
         });
         
-        // Enable the lab name select
-        examNameSelect.disabled = false;
+        // Enable the lab name select only when there is something to pick
+        examNameSelect.disabled = filteredLabs.length === 0;
         
         // Select the first lab by default
         if (filteredLabs.length > 0) {
