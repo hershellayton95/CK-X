@@ -24,11 +24,14 @@ RUN apt-get update && apt-get install -y \
 ARG TARGETARCH
 
 #install kubectl for x86_64 and ARM64 architectures
-RUN if [ "$TARGETARCH" = "amd64" ]; then \
+# TARGETARCH is only populated by BuildKit; fall back to the host architecture
+# so a plain `docker compose build` still installs kubectl.
+RUN ARCH="${TARGETARCH:-$(dpkg --print-architecture)}"; \
+    if [ "$ARCH" = "amd64" ]; then \
     curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl" \
     && chmod +x kubectl \
     && mv kubectl /usr/local/bin/kubectl; \
-    elif [ "$TARGETARCH" = "arm64" ]; then \
+    elif [ "$ARCH" = "arm64" ]; then \
     curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/arm64/kubectl" \
     && chmod +x kubectl \
     && mv kubectl /usr/local/bin/kubectl; \
@@ -39,6 +42,13 @@ RUN curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/s
     && chmod 700 get_helm.sh \
     && ./get_helm.sh \
     && rm get_helm.sh
+
+# Install kubeadm (Q14 certificate exercise). Version matches the k3s release
+# used by the k3d cluster (k3d v5.8.3 -> k3s v1.31.5).
+RUN ARCH="${TARGETARCH:-$(dpkg --print-architecture)}"; \
+    curl -fsSLo /usr/local/bin/kubeadm \
+      "https://dl.k8s.io/release/v1.31.5/bin/linux/${ARCH}/kubeadm" \
+    && chmod +x /usr/local/bin/kubeadm
 
 #override docker daemon to use cfg2group
 RUN echo '{ "exec-opts": ["native.cgroupdriver=cgroupfs"] }' > /etc/docker/daemon.json

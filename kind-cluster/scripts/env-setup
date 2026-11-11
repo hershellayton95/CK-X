@@ -57,6 +57,12 @@ agents: $NUM_WORKERS
 kubeAPI:
   host: "127.0.0.1"
   hostPort: "6443"
+ports:
+  # NodePort used by the Gateway API exercise (Q13) and reachable from the
+  # jumphost as r500.gateway:30080.
+  - port: 30080:30080
+    nodeFilters:
+      - server:0
 options:
   k3s:
     extraArgs:
