@@ -51,7 +51,7 @@
           "description": "Helm release cert-manager is installed in namespace cert-manager",
           "verificationScriptFile": "q2_s1_validate_helm_release.sh",
           "expectedOutput": "0",
-          "weightage": 3
+          "weightage": 2
         },
         {
           "id": "2",
@@ -152,14 +152,14 @@
           "description": "Both overlays build and no longer contain the horizontal-scaling-config ConfigMap",
           "verificationScriptFile": "q5_s1_validate_kustomize.sh",
           "expectedOutput": "0",
-          "weightage": 2
+          "weightage": 1
         },
         {
           "id": "2",
           "description": "Staging HPA targets api-gateway with min 2, max 4 and 50% CPU",
           "verificationScriptFile": "q5_s2_validate_staging_hpa.sh",
           "expectedOutput": "0",
-          "weightage": 3
+          "weightage": 2
         },
         {
           "id": "3",
@@ -239,6 +239,34 @@
       ]
     },
     {
+      "id": "8",
+      "namespace": "default",
+      "machineHostname": "k8s-api-server",
+      "question": "Your coworker noticed that the worker node `k3d-cka-node1-0` is running an older Kubernetes version than the control plane, and it is not Ready.\n\n1. Find the Kubernetes version of the control-plane node `k3d-cluster-server-0`.\n2. Recreate the worker node so it runs exactly the same Kubernetes version and is `Ready` in the cluster, keeping the node name `k3d-cka-node1-0`.\n\nWork from `k8s-api-server`, where `k3d` is installed. `k3d` cannot upgrade a node in place, so delete the old node and create it again using the same k3s image as the control-plane node. Use `kubectl` from `ckad9999` to verify the result.",
+      "concepts": [
+        "k3d",
+        "cluster join",
+        "nodes",
+        "version skew"
+      ],
+      "verification": [
+        {
+          "id": "1",
+          "description": "Node k3d-cka-node1-0 exists, is Ready and is a worker",
+          "verificationScriptFile": "q8_s1_validate_node_ready.sh",
+          "expectedOutput": "0",
+          "weightage": 3
+        },
+        {
+          "id": "2",
+          "description": "Node k3d-cka-node1-0 runs the same kubelet version as k3d-cluster-server-0",
+          "verificationScriptFile": "q8_s2_validate_version.sh",
+          "expectedOutput": "0",
+          "weightage": 2
+        }
+      ]
+    },
+    {
       "id": "9",
       "namespace": "project-swan",
       "machineHostname": "ckad9999",
@@ -262,7 +290,7 @@
           "description": "result.json is a SecretList containing at least one Secret",
           "verificationScriptFile": "q9_s2_validate_result.sh",
           "expectedOutput": "0",
-          "weightage": 3
+          "weightage": 2
         },
         {
           "id": "3",
@@ -297,7 +325,7 @@
           "description": "Role processor allows only create on secrets and configmaps",
           "verificationScriptFile": "q10_s2_validate_role.sh",
           "expectedOutput": "0",
-          "weightage": 3
+          "weightage": 2
         },
         {
           "id": "3",
@@ -325,7 +353,7 @@
           "description": "DaemonSet spec has the required labels, image, requests and control-plane toleration",
           "verificationScriptFile": "q11_s1_validate_spec.sh",
           "expectedOutput": "0",
-          "weightage": 4
+          "weightage": 3
         },
         {
           "id": "2",
@@ -340,7 +368,7 @@
       "id": "12",
       "namespace": "project-tiger",
       "machineHostname": "ckad9999",
-      "question": "In namespace `project-tiger`, create a Deployment named `deploy-important`:\n\n1. 3 replicas.\n2. The Deployment and its Pods have label `id=very-important`.\n3. First container `container` uses image `nginx:1-alpine`.\n4. Second container `container2` uses image `registry.k8s.io/pause:3.10`.\n5. Only one Pod may run on each worker node. Use `topologyKey: kubernetes.io/hostname` with pod anti-affinity or topology spread constraints.\n\nThe control-plane node is tainted. Because there are two worker nodes and three replicas, the third Pod should remain Pending.",
+      "question": "In namespace `project-tiger`, create a Deployment named `deploy-important`:\n\n1. 3 replicas.\n2. The Deployment and its Pods have label `id=very-important`.\n3. First container `container` uses image `nginx:1-alpine`.\n4. Second container `container2` uses image `registry.k8s.io/pause:3.10`.\n5. Only one Pod may run on each worker node. Use `topologyKey: kubernetes.io/hostname` with pod anti-affinity or topology spread constraints.\n\nThe control-plane node is tainted. Only one Pod may run on each Ready worker node; any replica beyond the number of worker nodes should remain Pending.",
       "concepts": [
         "deployments",
         "scheduling",
@@ -353,7 +381,7 @@
           "description": "Deployment has the required labels, replicas, containers and hostname scheduling rule",
           "verificationScriptFile": "q12_s1_validate_spec.sh",
           "expectedOutput": "0",
-          "weightage": 3
+          "weightage": 2
         },
         {
           "id": "2",
@@ -375,7 +403,7 @@
       "id": "13",
       "namespace": "project-r500",
       "machineHostname": "ckad9999",
-      "question": "Project r500 wants to replace an Ingress with Gateway API resources. The old Ingress is available at `/tmp/exam/13/ingress.yaml` and a Gateway named `main` already exists in namespace `project-r500`.\n\nCreate an HTTPRoute named `traffic-director` that:\n\n1. Replicates the Ingress routes: `/desktop` to Service `web-desktop` port 80 and `/mobile` to Service `web-mobile` port 80, for host `r500.gateway`.\n2. Adds path `/auto`: if the `User-Agent` header is exactly `mobile`, forward to `web-mobile`; otherwise forward to `web-desktop`.\n\nNo Gateway controller runs in this cluster, so validation is performed on the HTTPRoute spec.",
+      "question": "Project r500 wants to replace their Ingress with a Gateway API solution. The old Ingress is available at `/tmp/exam/13/ingress.yaml` and the Gateway `main` already exists in namespace `project-r500`.\n\nCreate an HTTPRoute named `traffic-director` that:\n\n1. Replicates the Ingress routes: `/desktop` to Service `web-desktop` port 80 and `/mobile` to Service `web-mobile` port 80, for host `r500.gateway`.\n2. Adds path `/auto`: if the `User-Agent` header is exactly `mobile`, forward to `web-mobile`; otherwise forward to `web-desktop`.\n\nThe Gateway is reachable at `http://r500.gateway:30080`, so these commands must work from `ckad9999`:\n\n```bash\ncurl r500.gateway:30080/desktop\ncurl r500.gateway:30080/mobile\ncurl r500.gateway:30080/auto -H 'User-Agent: mobile'\ncurl r500.gateway:30080/auto\n```",
       "concepts": [
         "gateway api",
         "httproute",
@@ -388,26 +416,61 @@
           "description": "HTTPRoute traffic-director references Gateway main and hostname r500.gateway",
           "verificationScriptFile": "q13_s1_validate_parent.sh",
           "expectedOutput": "0",
-          "weightage": 2
+          "weightage": 1
         },
         {
           "id": "2",
           "description": "Desktop and mobile prefix routes target the correct Services",
           "verificationScriptFile": "q13_s2_validate_routes.sh",
           "expectedOutput": "0",
-          "weightage": 3
+          "weightage": 1
         },
         {
           "id": "3",
           "description": "The /auto mobile rule matches User-Agent exactly and targets web-mobile",
           "verificationScriptFile": "q13_s3_validate_header_rule.sh",
           "expectedOutput": "0",
-          "weightage": 3
+          "weightage": 1
         },
         {
           "id": "4",
           "description": "The /auto catch-all rule targets web-desktop and comes after the header rule",
           "verificationScriptFile": "q13_s4_validate_catch_all.sh",
+          "expectedOutput": "0",
+          "weightage": 1
+        },
+        {
+          "id": "5",
+          "description": "Real traffic through r500.gateway:30080 follows all four routes",
+          "verificationScriptFile": "q13_s5_validate_traffic.sh",
+          "expectedOutput": "0",
+          "weightage": 3
+        }
+      ]
+    },
+    {
+      "id": "14",
+      "namespace": "default",
+      "machineHostname": "ckad9999",
+      "question": "Perform these certificate tasks on `ckad9999`:\n\n1. Check how long the kube-apiserver serving certificate `/etc/kubernetes/pki/apiserver.crt` is valid with `openssl x509` and write the expiration date to `/tmp/exam/14/expiration` as a single line, for example `notAfter=...`.\n2. Confirm the same expiration date with `kubeadm certs check-expiration`.\n3. Write the kubeadm command that renews the kube-apiserver certificate to `/tmp/exam/14/kubeadm-renew-certs.sh`. Write the command only, without running it.",
+      "concepts": [
+        "certificates",
+        "kube-apiserver",
+        "openssl",
+        "kubeadm"
+      ],
+      "verification": [
+        {
+          "id": "1",
+          "description": "/tmp/exam/14/expiration contains the kube-apiserver serving certificate expiration date",
+          "verificationScriptFile": "q14_s1_validate_expiration.sh",
+          "expectedOutput": "0",
+          "weightage": 3
+        },
+        {
+          "id": "2",
+          "description": "/tmp/exam/14/kubeadm-renew-certs.sh contains the kubeadm certificate renewal command",
+          "verificationScriptFile": "q14_s2_validate_renew.sh",
           "expectedOutput": "0",
           "weightage": 2
         }
@@ -493,12 +556,12 @@
       "id": "17",
       "namespace": "project-tiger",
       "machineHostname": "ckad9999",
-      "question": "In namespace `project-tiger`, create a Pod named `tigers-reunite` using image `httpd:2-alpine` with labels `pod=container` and `container=pod`.\n\nFind the node it runs on. This simulator does not provide SSH to cluster nodes, so use `kubectl` to inspect the container instead of `crictl`:\n\n1. Write the container ID and runtime type to `/tmp/exam/17/pod-container.txt`.\n2. Write the container logs to `/tmp/exam/17/pod-container.log`.",
+      "question": "In namespace `project-tiger`, create a Pod named `tigers-reunite` using image `httpd:2-alpine` with labels `pod=container` and `container=pod`.\n\nFind the node it runs on. The cluster nodes are containers on `k8s-api-server`, so run `crictl` on the node with:\n\n```bash\nssh k8s-api-server \"docker exec <node> crictl ...\"\n```\n\n1. Write the container ID and its `info.runtimeType` to `/tmp/exam/17/pod-container.txt`.\n2. Write the container logs to `/tmp/exam/17/pod-container.log`. `crictl logs` writes container stdout and stderr to separate streams, so capture both.",
       "concepts": [
         "pods",
         "container runtime",
-        "logs",
-        "kubectl"
+        "crictl",
+        "logs"
       ],
       "verification": [
         {

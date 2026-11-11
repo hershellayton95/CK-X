@@ -155,7 +155,7 @@
       "assetPath": "assets/exams/cka/008",
       "name": "CKA Simulator A (Killer.sh)",
       "category": "CKA",
-      "description": "15-question CKA simulator adapted from the Killer.sh CKA Simulator A session (credited to Killer.sh): kubeconfig contexts, Helm and cert-manager, StatefulSet scaling, QoS eviction order, Kustomize HPA, static PV/PVC, resource usage scripts, in-cluster API access, RBAC, DaemonSet tolerations, deployment anti-affinity, Gateway API HTTPRoute, egress NetworkPolicy, CoreDNS custom domain, and container inspection. Tasks that require node SSH (kubeadm upgrade, control-plane certificate inspection, crictl) are excluded or adapted for the single-cluster k3d environment.",
+      "description": "17-question CKA simulator adapted from the Killer.sh CKA Simulator A session (credited to Killer.sh): kubeconfig contexts, Helm and cert-manager, StatefulSet scaling, QoS eviction order, Kustomize HPA, static PV/PVC, resource usage scripts, updating and joining a worker node with k3d, in-cluster API access, RBAC, DaemonSet tolerations, deployment anti-affinity, Gateway API HTTPRoute served by NGINX Gateway Fabric, kube-apiserver certificate expiry with kubeadm, egress NetworkPolicy, CoreDNS custom domain, and container inspection with crictl.",
       "warmUpTimeInSeconds": 260,
       "difficulty": "Hard",
       "examDurationInMinutes": 120

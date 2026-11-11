@@ -2,12 +2,12 @@
 
 This lab is adapted from the Killer.sh CKA Simulator A session (`Simulation-A.pdf`) and rewritten for the CK-X single-cluster k3d environment. Killer.sh content is credited to Killer.sh.
 
-The original session solves tasks on several separate SSH instances and includes node-level exercises. CK-X provides one jumphost (`ckad9999`) and no SSH access to cluster nodes, so these tasks are excluded or adapted:
+The original session solves tasks on several separate SSH instances and includes node-level exercises. CK-X provides one jumphost (`ckad9999`) plus SSH access to the cluster host (`k8s-api-server`), so these tasks are adapted as follows:
 
-- Q8 (kubeadm upgrade and join) is excluded: there is no node SSH and the cluster is managed by k3d/k3s.
-- Q14 (inspect kube-apiserver certificates on the control-plane node) is excluded for the same reason.
-- Q17 uses `kubectl` instead of `crictl` on a worker node.
-- Q13 is validated at the Gateway API spec level because no Gateway controller runs in this cluster.
+- Q8 (node update and join) is adapted to k3d: the cluster is managed by k3d/k3s, so the setup starts an older agent node and stops it. You delete that node and recreate it with the same k3s image as the control plane.
+- Q14 (kube-apiserver certificate expiry and renewal) uses the real `kubeadm` binary on `ckad9999` against a kubeadm-style PKI directory at `/etc/kubernetes/pki`, built from the k3s control-plane certificates, because the cluster itself is k3d/k3s.
+- Q17 uses `crictl` on the worker node via `ssh k8s-api-server "docker exec <node> crictl ..."`, matching the original task.
+- Q13 uses a real NGINX Gateway Fabric controller, so the HTTPRoute is checked with actual HTTP traffic on NodePort `30080`.
 - The PDF preview questions (etcd internals, node iptables, ServiceCIDR) are excluded because they require control-plane or node access.
 
 All scratch files use `/tmp/exam`, which is removed during exam cleanup.
@@ -236,6 +236,51 @@ chmod +x /tmp/exam/7/node.sh /tmp/exam/7/pod.sh
 
 `kubectl top pod --containers=true` shows usage per container inside each Pod.
 
+## Question 8: Update a worker node and join it
+
+The cluster runs on k3d/k3s, so there is no kubeadm upgrade path. `k3d` cannot upgrade a node in place; the equivalent of "update the node and join it" is to delete the outdated node and create it again with the same k3s image as the control plane.
+
+Find the control-plane version and image:
+
+```bash
+kubectl get node k3d-cluster-server-0
+ssh k8s-api-server "docker inspect k3d-cluster-server-0 --format '{{.Config.Image}}'"
+```
+
+The image is `rancher/k3s:v1.31.5-k3s1`, matching `VERSION v1.31.5+k3s1`.
+
+From the cluster host:
+
+```bash
+ssh k8s-api-server
+
+k3d cluster list
+k3d node list
+
+k3d node delete k3d-cka-node1-0
+```
+
+`k3d node list` shows `k3d-cka-node1-0` as `exited`, and `kubectl get nodes` shows it as `NotReady`.
+
+Back on `ckad9999`, remove the stale Node object and create the node again with the control-plane image:
+
+```bash
+kubectl delete node k3d-cka-node1-0 --ignore-not-found
+
+ssh k8s-api-server \
+  "k3d node create cka-node1 --cluster cluster --role agent \
+   --image rancher/k3s:v1.31.5-k3s1 --wait"
+```
+
+The new node is `k3d-cka-node1-0` and joins the cluster automatically. Verify:
+
+```bash
+kubectl get nodes
+kubectl get node k3d-cka-node1-0 -o wide
+```
+
+`k3d-cka-node1-0` must be `Ready` and show the same `VERSION` as `k3d-cluster-server-0` (`v1.31.5+k3s1`).
+
 ## Question 9: Contact the Kubernetes API from a Pod
 
 Create the Pod:
@@ -383,11 +428,11 @@ Topology spread equivalent:
               id: very-important
 ```
 
-With two worker nodes and a tainted control-plane node, two Pods run and the third stays `Pending`.
+With a tainted control-plane node, each replica needs a distinct Ready worker. The number of Running Pods equals the number of Ready worker nodes; any remaining replica stays `Pending`.
 
 ## Question 13: Gateway API HTTPRoute
 
-The old Ingress routes:
+A real Gateway API controller (NGINX Gateway Fabric) runs in the cluster, so the routes are checked with actual HTTP requests. The old Ingress routes:
 
 - `/desktop` -> `web-desktop:80`
 - `/mobile` -> `web-mobile:80`
@@ -448,6 +493,51 @@ kubectl -n project-r500 get httproute traffic-director
 ```
 
 Path and header in the same `matches` entry are ANDed. The catch-all `/auto` rule must come after the mobile rule, otherwise the mobile request never reaches the header rule.
+
+Test the real traffic from `ckad9999`:
+
+```bash
+curl r500.gateway:30080/desktop
+# web-desktop
+curl r500.gateway:30080/mobile
+# web-mobile
+curl r500.gateway:30080/auto -H 'User-Agent: mobile'
+# web-mobile
+curl r500.gateway:30080/auto
+# web-desktop
+```
+
+## Question 14: kube-apiserver certificate expiry
+
+The cluster itself runs on k3d/k3s, so there is no kubeadm-managed control plane. The setup copies the k3s control-plane certificates into the default kubeadm PKI directory `/etc/kubernetes/pki`, and `kubeadm` is installed on `ckad9999`, so the real kubeadm commands from the original task work unchanged.
+
+Check the certificate with openssl and write the date:
+
+```bash
+openssl x509 -noout -enddate -in /etc/kubernetes/pki/apiserver.crt \
+  | sed 's/^notAfter=//' > /tmp/exam/14/expiration
+
+cat /tmp/exam/14/expiration
+```
+
+Confirm with kubeadm. The `!MISSING!` lines are the other kubeadm certificates, which do not exist in a k3s PKI:
+
+```bash
+kubeadm certs check-expiration
+```
+
+The `apiserver` row must show the same date as `/tmp/exam/14/expiration`.
+
+Renewal command:
+
+```bash
+printf '%s\n' 'kubeadm certs renew apiserver' \
+  > /tmp/exam/14/kubeadm-renew-certs.sh
+
+cat /tmp/exam/14/kubeadm-renew-certs.sh
+```
+
+`kubeadm certs renew apiserver` renews only the kube-apiserver serving certificate in `/etc/kubernetes/pki`.
 
 ## Question 15: Egress NetworkPolicy
 
@@ -534,18 +624,46 @@ Both `custom-domain` and `cluster.local` should resolve to the `kubernetes` Serv
 
 ## Question 17: Pod container information
 
+Create the Pod:
+
 ```bash
 kubectl -n project-tiger run tigers-reunite --image=httpd:2-alpine \
   --labels='pod=container,container=pod'
-
-POD=tigers-reunite
-CID=$(kubectl -n project-tiger get pod "$POD" \
-  -o jsonpath='{.status.containerStatuses[0].containerID}')
-echo "$CID"
-
-# containerID is containerd://<id>
-echo "${CID#containerd://} containerd" > /tmp/exam/17/pod-container.txt
-kubectl -n project-tiger logs "$POD" > /tmp/exam/17/pod-container.log
 ```
 
-The original task uses `crictl` on the node. CK-X does not expose node SSH, so the equivalent data comes from the Pod status and `kubectl logs`. The runtime type is `containerd`; the container ID is the part after `containerd://`.
+Find the node it runs on:
+
+```bash
+kubectl -n project-tiger get pod tigers-reunite -o wide
+```
+
+The cluster nodes are containers on `k8s-api-server`, so `crictl` runs on the node through `docker exec`. Replace `<node>` with the node name, for example `k3d-cluster-agent-0`:
+
+```bash
+ssh k8s-api-server "docker exec <node> crictl pods --name tigers-reunite -q"
+# 0587e75b...   (pod sandbox ID)
+
+ssh k8s-api-server "docker exec <node> crictl ps --pod <pod-id> -q"
+# fc69a5a8...   (container ID)
+
+ssh k8s-api-server "docker exec <node> crictl inspect <container-id>" \
+  | jq -r '.status.id, .info.runtimeType'
+# fc69a5a8...
+# io.containerd.runc.v2
+```
+
+Write the container ID and runtime type, and the logs:
+
+```bash
+CID=$(ssh k8s-api-server "docker exec <node> crictl ps --pod <pod-id> -q")
+
+printf '%s %s\n' "$CID" \
+  "$(ssh k8s-api-server "docker exec <node> crictl inspect $CID" \
+     | jq -r '.info.runtimeType')" \
+  > /tmp/exam/17/pod-container.txt
+
+ssh k8s-api-server "docker exec <node> crictl logs $CID" \
+  > /tmp/exam/17/pod-container.log 2>&1
+```
+
+The runtime type is `io.containerd.runc.v2` (it contains `containerd`), and the logs contain the httpd startup messages. `crictl logs` writes the container stdout and stderr to separate streams; Apache writes its startup messages to stderr, so capture both with `2>&1`.
