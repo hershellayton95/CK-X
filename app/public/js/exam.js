@@ -772,7 +772,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const questionNav = document.querySelector('.question-nav');
             if (questionNav) questionNav.style.display = 'none';
             
-            const hostname = examInfo.info?.config?.machineHostname || 'ckad9999';
+            const hostname = examInfo.info?.config?.machineHostname || 'playground9999';
             endExamBtnDropdown.textContent = 'End Session';
             questionContent.innerHTML = `
                 <div class="d-flex flex-column" style="height: 100%;">

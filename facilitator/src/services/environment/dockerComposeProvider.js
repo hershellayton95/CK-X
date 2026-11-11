@@ -65,11 +65,12 @@ function containerName(sessionId, service) {
  * Environment for `docker compose` interpolation. Only the fields the session
  * compose file references are relevant.
  */
-function composeEnv({ sessionId, vncPassword, terminalPassword }) {
+function composeEnv({ sessionId, vncPassword, terminalPassword, machineHostname }) {
   return {
     ...process.env,
     SESSION_ID: sessionId,
     SESSION_CLUSTER_NAME: clusterName(sessionId),
+    SESSION_MACHINE_HOSTNAME: machineHostname || 'ckad9999',
     SESSION_IMAGE_TAG: config.multisession.sessionImageTag,
     FACILITATOR_URL: config.multisession.facilitatorUrl,
     INTERNAL_TOKEN: config.multisession.internalToken || '',
@@ -167,12 +168,13 @@ async function ensureControlNetwork() {
  * @param {string} spec.examId
  * @param {string} spec.vncPassword
  * @param {string} [spec.terminalPassword]
+ * @param {string} [spec.machineHostname] - Category-aligned jumphost name
  * @returns {Promise<Object>} env descriptor stored on the session
  */
-async function createSession({ sessionId, examId, vncPassword, terminalPassword }) {
+async function createSession({ sessionId, examId, vncPassword, terminalPassword, machineHostname }) {
   const project = projectName(sessionId);
   const file = composeFile();
-  const env = composeEnv({ sessionId, vncPassword, terminalPassword });
+  const env = composeEnv({ sessionId, vncPassword, terminalPassword, machineHostname });
 
   logger.info(`Provisioning session environment ${project} (exam ${examId})`);
 
@@ -196,6 +198,7 @@ async function createSession({ sessionId, examId, vncPassword, terminalPassword 
     composeFile: file,
     network: networkName(sessionId),
     clusterName: clusterName(sessionId),
+    machineHostname: machineHostname || 'ckad9999',
     jumphostHost: containerName(sessionId, 'jumphost'),
     remoteDesktopHost: containerName(sessionId, 'remote-desktop'),
     remoteDesktopPort: 6901,

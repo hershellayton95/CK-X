@@ -8,6 +8,15 @@
 # hostnames (k8s-api-server, jumphost, remote-desktop, remote-terminal) stay
 # identical to the single-environment layout.
 
+x-machine-hostnames: &machine-hostnames
+  - cka9999
+  - ckad9999
+  - cks9999
+  - kcna9999
+  - kcsa9999
+  - playground9999
+  - other9999
+
 x-ckx-labels: &ckx-labels
   ckx.managed: "true"
   ckx.session: "${SESSION_ID}"
@@ -48,7 +57,9 @@ services:
   jumphost:
     image: ckx/ck-x-jumphost:${SESSION_IMAGE_TAG:-dev}
     container_name: ckx-${SESSION_ID}-jumphost
-    hostname: ckad9999
+    # Category-aligned name (cka9999 for CKA, ckad9999 for CKAD, ...). The
+    # aliases below keep every lab's SSH instructions working either way.
+    hostname: ${SESSION_MACHINE_HOSTNAME:-ckad9999}
     privileged: true
     expose:
       - "22"
@@ -60,7 +71,8 @@ services:
       - kube-config:/home/candidate/.kube
     labels: *ckx-labels
     networks:
-      - session
+      session:
+        aliases: *machine-hostnames
     deploy:
       resources:
         limits:

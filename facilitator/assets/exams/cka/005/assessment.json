@@ -3,7 +3,7 @@
     {
       "id": "1",
       "namespace": "default",
-      "machineHostname": "ckad9999",
+      "machineHostname": "cka9999",
       "question": "Create a pod named `redis-storage` in the `default` namespace using the image `redis:alpine`.\n\nThe pod must declare a volume named `redis-storage` of type `emptyDir` and mount it at `/data/redis`.",
       "concepts": [
         "volumes",
@@ -37,7 +37,7 @@
     {
       "id": "2",
       "namespace": "default",
-      "machineHostname": "ckad9999",
+      "machineHostname": "cka9999",
       "question": "Create a pod named `super-user-pod` in the `default` namespace using the image `busybox:1.28`.\n\n- The container must run the command `sleep 4800`.\n- The container must add the capability `SYS_TIME`.",
       "concepts": [
         "security context",
@@ -64,7 +64,7 @@
     {
       "id": "3",
       "namespace": "default",
-      "machineHostname": "ckad9999",
+      "machineHostname": "cka9999",
       "question": "Create a PersistentVolumeClaim named `my-pvc` in the `default` namespace:\n\n- accessMode: `ReadWriteOnce`\n- requested storage: `10Mi`\n\nThen create a pod named `use-pv` using the image `nginx` that mounts this claim at `/data`.",
       "concepts": [
         "persistentvolumeclaims",
@@ -98,7 +98,7 @@
     {
       "id": "4",
       "namespace": "default",
-      "machineHostname": "ckad9999",
+      "machineHostname": "cka9999",
       "question": "Create a deployment named `nginx-deploy` in the `default` namespace with `1` replica using the image `nginx:1.16`.\n\nThen upgrade it to image `nginx:1.17` using a rolling update so that the rollout history records the change.",
       "concepts": [
         "deployments",
@@ -132,8 +132,8 @@
     {
       "id": "5",
       "namespace": "default",
-      "machineHostname": "ckad9999",
-      "question": "Set up DNS troubleshooting:\n\n1. Create a pod named `nginx-resolver` using the image `nginx`.\n2. Expose it with a service named `nginx-resolver-service` on port `80` (ClusterIP).\n3. Run `nslookup` against the **service** name and save the output to `/tmp/exam/nginx.svc` on `ckad9999`.\n4. Run `nslookup` against the **pod IP** and save the output to `/tmp/exam/nginx.pod` on `ckad9999`.\n\nBoth files must contain the resolved IP address.",
+      "machineHostname": "cka9999",
+      "question": "Set up DNS troubleshooting:\n\n1. Create a pod named `nginx-resolver` using the image `nginx`.\n2. Expose it with a service named `nginx-resolver-service` on port `80` (ClusterIP).\n3. Run `nslookup` against the **service** name and save the output to `/tmp/exam/nginx.svc` on `cka9999`.\n4. Run `nslookup` against the **pod IP** and save the output to `/tmp/exam/nginx.pod` on `cka9999`.\n\nBoth files must contain the resolved IP address.",
       "concepts": [
         "dns",
         "services",
@@ -166,7 +166,7 @@
     {
       "id": "6",
       "namespace": "default",
-      "machineHostname": "ckad9999",
+      "machineHostname": "cka9999",
       "question": "A pod called `pvviewer` must be able to list PersistentVolumes:\n\n1. Create a ServiceAccount named `pvviewer` in `default`.\n2. Create a ClusterRole named `pvviewer-role` that allows `list` on `persistentvolumes`.\n3. Create a ClusterRoleBinding named `pvviewer-role-binding` binding that role to the ServiceAccount.\n4. Create a pod named `pvviewer` using the image `redis` that runs under the `pvviewer` ServiceAccount.",
       "concepts": [
         "rbac",
@@ -200,8 +200,8 @@
     {
       "id": "7",
       "namespace": "default",
-      "machineHostname": "ckad9999",
-      "question": "Write the `InternalIP` of every node in the cluster, space-separated on a single line, to the file `/tmp/exam/node_ips` on `ckad9999`.",
+      "machineHostname": "cka9999",
+      "question": "Write the `InternalIP` of every node in the cluster, space-separated on a single line, to the file `/tmp/exam/node_ips` on `cka9999`.",
       "concepts": [
         "kubectl",
         "jsonpath",
@@ -227,7 +227,7 @@
     {
       "id": "8",
       "namespace": "default",
-      "machineHostname": "ckad9999",
+      "machineHostname": "cka9999",
       "question": "Create a pod named `multi-pod` in the `default` namespace with two containers:\n\n- `alpha`: image `nginx`, environment variable `name=alpha`\n- `beta`: image `busybox`, command `sleep 4800`, environment variable `name=beta`",
       "concepts": [
         "multi-container pods",
@@ -261,7 +261,7 @@
     {
       "id": "9",
       "namespace": "default",
-      "machineHostname": "ckad9999",
+      "machineHostname": "cka9999",
       "question": "Create a pod named `non-root-pod` in the `default` namespace using the image `redis:alpine`.\n\nThe pod-level security context must set `runAsUser: 1000` and `fsGroup: 2000`.",
       "concepts": [
         "pod security",
@@ -295,7 +295,7 @@
     {
       "id": "10",
       "namespace": "default",
-      "machineHostname": "ckad9999",
+      "machineHostname": "cka9999",
       "question": "The pod `np-test-1` (already running, label `run=np-test-1`) must only accept ingress traffic on port `80`.\n\nCreate a NetworkPolicy named `ingress-to-nptest` in the `default` namespace that:\n\n- selects pods with label `run=np-test-1`\n- declares policy type `Ingress`\n- allows ingress on TCP port `80`",
       "concepts": [
         "networkpolicies",
@@ -322,7 +322,7 @@
     {
       "id": "11",
       "namespace": "default",
-      "machineHostname": "ckad9999",
+      "machineHostname": "cka9999",
       "question": "Node `k3d-cluster-agent-1` is reserved for production workloads:\n\n1. Taint the node with `env_type=production:NoSchedule`.\n2. Create a pod named `dev-redis` using image `redis:alpine` - it must **not** be scheduled on `k3d-cluster-agent-1`.\n3. Create a pod named `prod-redis` using image `redis:alpine` **with** a toleration for that taint **and** a nodeSelector pinning it to `k3d-cluster-agent-1`.",
       "concepts": [
         "taints",
@@ -357,8 +357,8 @@
     {
       "id": "12",
       "namespace": "default",
-      "machineHostname": "ckad9999",
-      "question": "A kubeconfig file called `super.kubeconfig` exists at `/tmp/exam/super.kubeconfig` on `ckad9999`, but it is broken - it points at the wrong API server port.\n\nTroubleshoot and fix it so that:\n\n```bash\nkubectl --kubeconfig=/tmp/exam/super.kubeconfig get nodes\n```\n\nworks. Compare it with the working kubeconfig at `/home/candidate/.kube/kubeconfig` if you need a reference.",
+      "machineHostname": "cka9999",
+      "question": "A kubeconfig file called `super.kubeconfig` exists at `/tmp/exam/super.kubeconfig` on `cka9999`, but it is broken - it points at the wrong API server port.\n\nTroubleshoot and fix it so that:\n\n```bash\nkubectl --kubeconfig=/tmp/exam/super.kubeconfig get nodes\n```\n\nworks. Compare it with the working kubeconfig at `/home/candidate/.kube/kubeconfig` if you need a reference.",
       "concepts": [
         "kubeconfig",
         "troubleshooting",

@@ -1,3 +1,12 @@
+x-machine-hostnames: &machine-hostnames
+  - cka9999
+  - ckad9999
+  - cks9999
+  - kcna9999
+  - kcsa9999
+  - playground9999
+  - other9999
+
 services:
   # VNC Server (Ubuntu)
   remote-desktop:
@@ -94,12 +103,14 @@ services:
     networks:
       - ckx-network
 
-  # Jump Host (ckad9999 and ckad9988)
+  # Jump Host. The name follows the certification (cka9999 for CKA, ckad9999
+  # for CKAD, ...); all names below are aliased to the same container so old
+  # lab instructions keep resolving.
   jumphost:
     image: ckx/ck-x-jumphost:${SESSION_IMAGE_TAG:-dev}
     build:
       context: ./jumphost
-    hostname: ckad9999
+    hostname: ${MACHINE_HOSTNAME:-ckad9999}
     privileged: true
     # No external port mappings - only accessible internally
     expose:
@@ -118,7 +129,8 @@ services:
           cpus: "0.5"
           memory: 512M
     networks:
-      - ckx-network
+      ckx-network:
+        aliases: *machine-hostnames
     healthcheck:
       test: ["CMD", "nc", "-z", "localhost", "22"]
       interval: 10s

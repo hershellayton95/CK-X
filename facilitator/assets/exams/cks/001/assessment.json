@@ -3,7 +3,7 @@
     {
       "id": "1",
       "namespace": "network-security",
-      "machineHostname": "ckad9999",
+      "machineHostname": "cks9999",
       "question": "Create a NetworkPolicy named `secure-backend` in the `network-security` namespace that restricts access to pods with label `app=backend` to only allow ingress traffic from pods with label `app=frontend` on port 8080.\n\nAdditionally, ensure that these backend pods can only make egress connections to pods with label `app=database` on port 5432.",
       "concepts": ["network policies", "ingress", "egress"],
       "verification": [
@@ -33,7 +33,7 @@
     {
       "id": "2",
       "namespace": "secure-ingress",
-      "machineHostname": "ckad9999",
+      "machineHostname": "cks9999",
       "question": "Create a TLS-enabled Ingress resource named `secure-app` in the `secure-ingress` namespace for the service `web-service` (port 80).\n\nThe Ingress should:\n- Respond to the hostname `secure-app.example.com`\n- Use a TLS secret named `secure-app-tls`\n\nThe TLS secret has already been created in the `secure-ingress` namespace.",
       "concepts": ["ingress", "tls"],
       "verification": [
@@ -63,7 +63,7 @@
     {
       "id": "3",
       "namespace": "api-security",
-      "machineHostname": "ckad9999",
+      "machineHostname": "cks9999",
       "question": "Enhance the security of the Kubernetes API server by configuring a Pod Security Policy (PSP) or Pod Security Standard (PSS):\n\n1. Create a namespace named `api-security`\n\n2. Apply a label to the namespace to enforce the `baseline` Pod Security Standard: `pod-security.kubernetes.io/enforce=baseline`\n\n3. Create a pod named `secure-pod` using the `nginx` image that complies with the baseline Pod Security Standard.\n\n4. Create a Role named `pss-viewer-role` and RoleBinding named `pss-viewer-binding` that allow a ServiceAccount named `pss-viewer` (which has already been created) to view the pod security standards applied to namespaces.",
       "concepts": ["api security", "pod security standards", "rbac"],
       "verification": [
@@ -93,7 +93,7 @@
     {
       "id": "4",
       "namespace": "metadata-protect",
-      "machineHostname": "ckad9999",
+      "machineHostname": "cks9999",
       "question": "Protect the Kubernetes node metadata from being accessed by pods. Create a NetworkPolicy named `block-metadata` in the `metadata-protect` namespace that blocks outbound access from all pods to the Kubernetes metadata endpoint (usually at 169.254.169.254).\n\nVerify your implementation by creating a pod named `test-pod` in the same namespace using the `busybox` image with a command that sleeps for 3600 seconds.",
       "concepts": ["network policies", "metadata protection"],
       "verification": [
@@ -123,7 +123,7 @@
     {
       "id": "5",
       "namespace": "binary-verify",
-      "machineHostname": "ckad9999",
+      "machineHostname": "cks9999",
       "question": "You need to verify the integrity of Kubernetes binaries before deploying them. In the `binary-verify` namespace, create a pod named `verify-bin` using the `busybox` image that mounts the host's `/usr/bin` directory as a read-only volume at `/host-bin`.\n\nInside the pod, write a script that calculates the SHA256 hash of the following files and stores the results in a file at `/tmp/verified-hashes.txt` within the pod:\n- /host-bin/kubectl\n- /host-bin/kubelet\n\nUse the command format: `sha256sum [file] >> /tmp/verified-hashes.txt`",
       "concepts": ["binary verification", "hostpath volumes"],
       "verification": [
@@ -153,7 +153,7 @@
     {
       "id": "6",
       "namespace": "rbac-minimize",
-      "machineHostname": "ckad9999",
+      "machineHostname": "cks9999",
       "question": "Create a Role and RoleBinding in the `rbac-minimize` namespace to provide a ServiceAccount named `app-reader` with minimal permissions required to read pods, services, and deployments, but not secrets or configmaps.\n\nThe Role should be named `app-reader-role` and the RoleBinding should be named `app-reader-binding`.",
       "concepts": ["rbac", "role", "rolebinding", "least privilege"],
       "verification": [
@@ -183,7 +183,7 @@
     {
       "id": "7",
       "namespace": "service-account-caution",
-      "machineHostname": "ckad9999",
+      "machineHostname": "cks9999",
       "question": "In the `service-account-caution` namespace, create a Deployment named `secure-app` with 2 replicas that uses the `nginx` image.\n\nConfigure the Deployment to use a custom ServiceAccount named `minimal-sa` that you will create. The ServiceAccount should have automounting of API credentials disabled.\n\nAdditionally, configure the Pod template to explicitly disable service account token automounting.",
       "concepts": ["service accounts", "automounting", "least privilege"],
       "verification": [
@@ -220,7 +220,7 @@
     {
       "id": "8",
       "namespace": "api-restrict",
-      "machineHostname": "ckad9999",
+      "machineHostname": "cks9999",
       "question": "Restrict access to the Kubernetes API server by creating a NetworkPolicy named `api-server-policy` in the `api-restrict` namespace that denies all egress traffic to the Kubernetes API server except from pods with the label `role=admin`.\n\nCreate a pod named `admin-pod` with label `role=admin` and a pod named `restricted-pod` with label `role=restricted` in the same namespace. Both pods should use the `busybox` image and sleep for 3600 seconds.",
       "concepts": ["network policies", "api server", "egress control"],
       "verification": [
@@ -250,7 +250,7 @@
     {
       "id": "9",
       "namespace": "os-hardening",
-      "machineHostname": "ckad9999",
+      "machineHostname": "cks9999",
       "question": "Create a pod named `secure-container` in the `os-hardening` namespace using the `nginx` image with the following security settings:\n\n1. The container should drop ALL capabilities and only add back the `NET_BIND_SERVICE` capability\n2. The container should use a read-only root filesystem\n3. The container should run as user ID 1000 and group ID 3000\n\nEnsure the container can start successfully and serve traffic on port 80.",
       "concepts": ["capabilities", "read-only filesystem", "user context"],
       "verification": [
@@ -287,7 +287,7 @@
     {
       "id": "10",
       "namespace": "seccomp-profile",
-      "machineHostname": "ckad9999",
+      "machineHostname": "cks9999",
       "question": "Create a pod named `seccomp-pod` in the `seccomp-profile` namespace using the `nginx` image with a seccomp profile applied.\n\nThe seccomp profile should be the default runtime/default profile.\n\nAdditionally, create a ConfigMap named `seccomp-config` in the same namespace with key `profile.json` containing a simple seccomp profile that allows only the following syscalls: `exit`, `exit_group`, `rt_sigreturn`, `read`, `write`, and `open`.",
       "concepts": ["seccomp", "syscalls", "container hardening"],
       "verification": [
@@ -317,7 +317,7 @@
     {
       "id": "11",
       "namespace": "pod-security",
-      "machineHostname": "ckad9999",
+      "machineHostname": "cks9999",
       "question": "Label the `pod-security` namespace to enforce the `baseline` Pod Security Standard.\n\nThen, create a pod named `compliant-pod` that complies with the baseline Pod Security Standard.\n\nFinally, attempt to create a pod named `non-compliant-pod` that violates the standard by running as root and with privileged security context. Document the error in a file named `/tmp/violation.txt`.",
       "concepts": ["pod security standards", "namespace labels"],
       "verification": [
@@ -347,7 +347,7 @@
     {
       "id": "12",
       "namespace": "secrets-management",
-      "machineHostname": "ckad9999",
+      "machineHostname": "cks9999",
       "question": "Create a Secret named `db-creds` in the `secrets-management` namespace with the following data:\n- username: `admin`\n- password: `SecretP@ssw0rd`\n\nDeploy a pod named `secure-app` that mounts this secret as files at `/etc/db-creds`.\n\nAdditionally, deploy a second pod named `env-app` that exposes the secret data as environment variables with names `DB_USER` and `DB_PASS`.\n\nBoth pods should use the `busybox` image and run the command `sleep 3600`.",
       "concepts": ["secrets", "volume mounts", "environment variables"],
       "verification": [

@@ -2,10 +2,10 @@
 
 This lab is adapted from the Killer.sh CKA Simulator A session (`Simulation-A.pdf`) and rewritten for the CK-X single-cluster k3d environment. Killer.sh content is credited to Killer.sh.
 
-The original session solves tasks on several separate SSH instances and includes node-level exercises. CK-X provides one jumphost (`ckad9999`) plus SSH access to the cluster host (`k8s-api-server`), so these tasks are adapted as follows:
+The original session solves tasks on several separate SSH instances and includes node-level exercises. CK-X provides one jumphost (`cka9999`) plus SSH access to the cluster host (`k8s-api-server`), so these tasks are adapted as follows:
 
 - Q8 (node update and join) is adapted to k3d: the cluster is managed by k3d/k3s, so the setup starts an older agent node and stops it. You delete that node and recreate it with the same k3s image as the control plane.
-- Q14 (kube-apiserver certificate expiry and renewal) uses the real `kubeadm` binary on `ckad9999` against a kubeadm-style PKI directory at `/etc/kubernetes/pki`, built from the k3s control-plane certificates, because the cluster itself is k3d/k3s.
+- Q14 (kube-apiserver certificate expiry and renewal) uses the real `kubeadm` binary on `cka9999` against a kubeadm-style PKI directory at `/etc/kubernetes/pki`, built from the k3s control-plane certificates, because the cluster itself is k3d/k3s.
 - Q17 uses `crictl` on the worker node via `ssh k8s-api-server "docker exec <node> crictl ..."`, matching the original task.
 - Q13 uses a real NGINX Gateway Fabric controller, so the HTTPRoute is checked with actual HTTP traffic on NodePort `30080`.
 - The PDF preview questions (etcd internals, node iptables, ServiceCIDR) are excluded because they require control-plane or node access.
@@ -262,7 +262,7 @@ k3d node delete k3d-cka-node1-0
 
 `k3d node list` shows `k3d-cka-node1-0` as `exited`, and `kubectl get nodes` shows it as `NotReady`.
 
-Back on `ckad9999`, remove the stale Node object and create the node again with the control-plane image:
+Back on `cka9999`, remove the stale Node object and create the node again with the control-plane image:
 
 ```bash
 kubectl delete node k3d-cka-node1-0 --ignore-not-found
@@ -494,7 +494,7 @@ kubectl -n project-r500 get httproute traffic-director
 
 Path and header in the same `matches` entry are ANDed. The catch-all `/auto` rule must come after the mobile rule, otherwise the mobile request never reaches the header rule.
 
-Test the real traffic from `ckad9999`:
+Test the real traffic from `cka9999`:
 
 ```bash
 curl r500.gateway:30080/desktop
@@ -509,7 +509,7 @@ curl r500.gateway:30080/auto
 
 ## Question 14: kube-apiserver certificate expiry
 
-The cluster itself runs on k3d/k3s, so there is no kubeadm-managed control plane. The setup copies the k3s control-plane certificates into the default kubeadm PKI directory `/etc/kubernetes/pki`, and `kubeadm` is installed on `ckad9999`, so the real kubeadm commands from the original task work unchanged.
+The cluster itself runs on k3d/k3s, so there is no kubeadm-managed control plane. The setup copies the k3s control-plane certificates into the default kubeadm PKI directory `/etc/kubernetes/pki`, and `kubeadm` is installed on `cka9999`, so the real kubeadm commands from the original task work unchanged.
 
 Check the certificate with openssl and write the date:
 

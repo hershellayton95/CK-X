@@ -3,7 +3,7 @@
     {
       "id": "1",
       "namespace": "default",
-      "machineHostname": "ckad9999",
+      "machineHostname": "cka9999",
       "question": "A kubeconfig file is available at `/tmp/exam/1/kubeconfig`.\n\nExtract the following information from it:\n\n1. Write all kubeconfig context names to `/tmp/exam/1/contexts`, one per line.\n2. Write the name of the current context to `/tmp/exam/1/current-context`.\n3. Write the `client-certificate-data` of user `account-0027@internal`, base64-decoded, to `/tmp/exam/1/cert`.\n\nUse `kubectl config` where practical.",
       "concepts": [
         "kubeconfig",
@@ -37,7 +37,7 @@
     {
       "id": "2",
       "namespace": "cert-manager",
-      "machineHostname": "ckad9999",
+      "machineHostname": "cka9999",
       "question": "Install cert-manager with Helm in namespace `cert-manager` and configure a ClusterIssuer:\n\n1. Create namespace `cert-manager`.\n2. Install the Helm chart `jetstack/cert-manager` with release name `cert-manager` and `crds.enabled=true` into that namespace.\n3. Edit `/tmp/exam/2/cluster-issuer.yaml` and add `crlDistributionPoints: [\"http://example.com/crl\"]` under `spec.selfSigned`.\n4. Create the ClusterIssuer from that file.\n\nThe `jetstack` Helm repository is already available. cert-manager does not need to issue real certificates.",
       "concepts": [
         "helm",
@@ -79,7 +79,7 @@
     {
       "id": "3",
       "namespace": "project-h800",
-      "machineHostname": "ckad9999",
+      "machineHostname": "cka9999",
       "question": "The Pods `o3db-0` and `o3db-1` in namespace `project-h800` are managed by a StatefulSet.\n\nScale the StatefulSet down to exactly one replica. Do not delete the StatefulSet.",
       "concepts": [
         "statefulsets",
@@ -112,7 +112,7 @@
     {
       "id": "4",
       "namespace": "project-c13",
-      "machineHostname": "ckad9999",
+      "machineHostname": "cka9999",
       "question": "Check all Pods in namespace `project-c13` and find the Pods that would probably be terminated first if the nodes run out of CPU or memory.\n\nWrite their names, one per line, to `/tmp/exam/4/pods-terminated-first.txt`.\n\nPods without CPU or memory requests/limits (QoS class `BestEffort`) are the first candidates.",
       "concepts": [
         "qos",
@@ -139,7 +139,7 @@
     {
       "id": "5",
       "namespace": "api-gateway-staging",
-      "machineHostname": "ckad9999",
+      "machineHostname": "cka9999",
       "question": "The application `api-gateway` used an external autoscaler and should now use a HorizontalPodAutoscaler.\n\nUsing the Kustomize configuration at `/tmp/exam/5/api-gateway`:\n\n1. Remove the ConfigMap `horizontal-scaling-config` completely from the base and both overlays.\n2. Add an HPA named `api-gateway` for Deployment `api-gateway` with min 2, max 4 replicas and 50% average CPU utilisation.\n3. In the prod overlay the HPA must have max 6 replicas.\n4. Apply the staging and prod overlays so the changes are reflected in the cluster.\n\nThe ConfigMaps already exist in the cluster and must also be removed from both namespaces.",
       "concepts": [
         "kustomize",
@@ -180,7 +180,7 @@
     {
       "id": "6",
       "namespace": "project-t230",
-      "machineHostname": "ckad9999",
+      "machineHostname": "cka9999",
       "question": "Create storage and a workload in namespace `project-t230`:\n\n1. Create a PersistentVolume named `safari-pv` with capacity `2Gi`, access mode `ReadWriteOnce`, hostPath `/Volumes/Data`, and no `storageClassName`.\n2. Create a PersistentVolumeClaim named `safari-pvc` requesting `2Gi`, access mode `ReadWriteOnce`, and no `storageClassName`. It must bind to `safari-pv`.\n3. Create a Deployment named `safari` using image `httpd:2-alpine` that mounts the PVC at `/tmp/safari-data`.",
       "concepts": [
         "persistent volumes",
@@ -214,7 +214,7 @@
     {
       "id": "7",
       "namespace": "default",
-      "machineHostname": "ckad9999",
+      "machineHostname": "cka9999",
       "question": "Write two bash scripts that use `kubectl`:\n\n1. `/tmp/exam/7/node.sh` must show resource usage of nodes.\n2. `/tmp/exam/7/pod.sh` must show resource usage of Pods and their containers.\n\nUse the full `kubectl` command, not shell aliases.",
       "concepts": [
         "metrics",
@@ -242,7 +242,7 @@
       "id": "8",
       "namespace": "default",
       "machineHostname": "k8s-api-server",
-      "question": "Your coworker noticed that the worker node `k3d-cka-node1-0` is running an older Kubernetes version than the control plane, and it is not Ready.\n\n1. Find the Kubernetes version of the control-plane node `k3d-cluster-server-0`.\n2. Recreate the worker node so it runs exactly the same Kubernetes version and is `Ready` in the cluster, keeping the node name `k3d-cka-node1-0`.\n\nWork from `k8s-api-server`, where `k3d` is installed. `k3d` cannot upgrade a node in place, so delete the old node and create it again using the same k3s image as the control-plane node. Use `kubectl` from `ckad9999` to verify the result.",
+      "question": "Your coworker noticed that the worker node `k3d-cka-node1-0` is running an older Kubernetes version than the control plane, and it is not Ready.\n\n1. Find the Kubernetes version of the control-plane node `k3d-cluster-server-0`.\n2. Recreate the worker node so it runs exactly the same Kubernetes version and is `Ready` in the cluster, keeping the node name `k3d-cka-node1-0`.\n\nWork from `k8s-api-server`, where `k3d` is installed. `k3d` cannot upgrade a node in place, so delete the old node and create it again using the same k3s image as the control-plane node. Use `kubectl` from `cka9999` to verify the result.",
       "concepts": [
         "k3d",
         "cluster join",
@@ -269,7 +269,7 @@
     {
       "id": "9",
       "namespace": "project-swan",
-      "machineHostname": "ckad9999",
+      "machineHostname": "cka9999",
       "question": "ServiceAccount `secret-reader` exists in namespace `project-swan`.\n\n1. Create a Pod named `api-contact` using image `nginx:1-alpine` and that ServiceAccount.\n2. Exec into the Pod and use `curl` to query all Secrets from the Kubernetes API.\n3. Write the JSON result to `/tmp/exam/9/result.json`.\n\nUse the ServiceAccount token from the Pod to authenticate.",
       "concepts": [
         "service accounts",
@@ -304,7 +304,7 @@
     {
       "id": "10",
       "namespace": "project-hamster",
-      "machineHostname": "ckad9999",
+      "machineHostname": "cka9999",
       "question": "In namespace `project-hamster`, create a ServiceAccount, Role and RoleBinding, all named `processor`.\n\nThe permissions must allow the ServiceAccount to only create Secrets and ConfigMaps in that namespace.",
       "concepts": [
         "rbac",
@@ -339,7 +339,7 @@
     {
       "id": "11",
       "namespace": "project-tiger",
-      "machineHostname": "ckad9999",
+      "machineHostname": "cka9999",
       "question": "In namespace `project-tiger`, create a DaemonSet named `ds-important`:\n\n1. Image `httpd:2-alpine`.\n2. Labels `id=ds-important` and `uuid=18426a0b-5f59-4e10-923f-c0e078e82462` on the DaemonSet and its Pods.\n3. Pods request `10m` CPU and `10Mi` memory.\n4. Pods must run on every node, including the control-plane node.\n\nThe control-plane node is tainted with `node-role.kubernetes.io/control-plane:NoSchedule`.",
       "concepts": [
         "daemonsets",
@@ -367,7 +367,7 @@
     {
       "id": "12",
       "namespace": "project-tiger",
-      "machineHostname": "ckad9999",
+      "machineHostname": "cka9999",
       "question": "In namespace `project-tiger`, create a Deployment named `deploy-important`:\n\n1. 3 replicas.\n2. The Deployment and its Pods have label `id=very-important`.\n3. First container `container` uses image `nginx:1-alpine`.\n4. Second container `container2` uses image `registry.k8s.io/pause:3.10`.\n5. Only one Pod may run on each worker node. Use `topologyKey: kubernetes.io/hostname` with pod anti-affinity or topology spread constraints.\n\nThe control-plane node is tainted. Only one Pod may run on each Ready worker node; any replica beyond the number of worker nodes should remain Pending.",
       "concepts": [
         "deployments",
@@ -402,8 +402,8 @@
     {
       "id": "13",
       "namespace": "project-r500",
-      "machineHostname": "ckad9999",
-      "question": "Project r500 wants to replace their Ingress with a Gateway API solution. The old Ingress is available at `/tmp/exam/13/ingress.yaml` and the Gateway `main` already exists in namespace `project-r500`.\n\nCreate an HTTPRoute named `traffic-director` that:\n\n1. Replicates the Ingress routes: `/desktop` to Service `web-desktop` port 80 and `/mobile` to Service `web-mobile` port 80, for host `r500.gateway`.\n2. Adds path `/auto`: if the `User-Agent` header is exactly `mobile`, forward to `web-mobile`; otherwise forward to `web-desktop`.\n\nThe Gateway is reachable at `http://r500.gateway:30080`, so these commands must work from `ckad9999`:\n\n```bash\ncurl r500.gateway:30080/desktop\ncurl r500.gateway:30080/mobile\ncurl r500.gateway:30080/auto -H 'User-Agent: mobile'\ncurl r500.gateway:30080/auto\n```",
+      "machineHostname": "cka9999",
+      "question": "Project r500 wants to replace their Ingress with a Gateway API solution. The old Ingress is available at `/tmp/exam/13/ingress.yaml` and the Gateway `main` already exists in namespace `project-r500`.\n\nCreate an HTTPRoute named `traffic-director` that:\n\n1. Replicates the Ingress routes: `/desktop` to Service `web-desktop` port 80 and `/mobile` to Service `web-mobile` port 80, for host `r500.gateway`.\n2. Adds path `/auto`: if the `User-Agent` header is exactly `mobile`, forward to `web-mobile`; otherwise forward to `web-desktop`.\n\nThe Gateway is reachable at `http://r500.gateway:30080`, so these commands must work from `cka9999`:\n\n```bash\ncurl r500.gateway:30080/desktop\ncurl r500.gateway:30080/mobile\ncurl r500.gateway:30080/auto -H 'User-Agent: mobile'\ncurl r500.gateway:30080/auto\n```",
       "concepts": [
         "gateway api",
         "httproute",
@@ -451,8 +451,8 @@
     {
       "id": "14",
       "namespace": "default",
-      "machineHostname": "ckad9999",
-      "question": "Perform these certificate tasks on `ckad9999`:\n\n1. Check how long the kube-apiserver serving certificate `/etc/kubernetes/pki/apiserver.crt` is valid with `openssl x509` and write the expiration date to `/tmp/exam/14/expiration` as a single line, for example `notAfter=...`.\n2. Confirm the same expiration date with `kubeadm certs check-expiration`.\n3. Write the kubeadm command that renews the kube-apiserver certificate to `/tmp/exam/14/kubeadm-renew-certs.sh`. Write the command only, without running it.",
+      "machineHostname": "cka9999",
+      "question": "Perform these certificate tasks on `cka9999`:\n\n1. Check how long the kube-apiserver serving certificate `/etc/kubernetes/pki/apiserver.crt` is valid with `openssl x509` and write the expiration date to `/tmp/exam/14/expiration` as a single line, for example `notAfter=...`.\n2. Confirm the same expiration date with `kubeadm certs check-expiration`.\n3. Write the kubeadm command that renews the kube-apiserver certificate to `/tmp/exam/14/kubeadm-renew-certs.sh`. Write the command only, without running it.",
       "concepts": [
         "certificates",
         "kube-apiserver",
@@ -479,7 +479,7 @@
     {
       "id": "15",
       "namespace": "project-snake",
-      "machineHostname": "ckad9999",
+      "machineHostname": "cka9999",
       "question": "After a security incident, create a NetworkPolicy named `np-backend` in namespace `project-snake`.\n\nThe policy must allow the `backend-*` Pods only to:\n\n1. Connect to `db1-*` Pods on port `1111`.\n2. Connect to `db2-*` Pods on port `2222`.\n\nUse the `app` Pod labels. All other egress from `backend-*` Pods must be denied.",
       "concepts": [
         "network policies",
@@ -521,7 +521,7 @@
     {
       "id": "16",
       "namespace": "kube-system",
-      "machineHostname": "ckad9999",
+      "machineHostname": "cka9999",
       "question": "Update the CoreDNS configuration:\n\n1. Back up the existing CoreDNS ConfigMap to `/tmp/exam/16/coredns_backup.yaml` so it can be restored quickly.\n2. Update CoreDNS so `SERVICE.NAMESPACE.custom-domain` resolves the same as `SERVICE.NAMESPACE.cluster.local`, in addition to it.\n3. Restart CoreDNS and confirm it is healthy.\n\nYou can test with a `busybox:1.36` Pod using `nslookup kubernetes.default.svc.custom-domain`.",
       "concepts": [
         "coredns",
@@ -555,7 +555,7 @@
     {
       "id": "17",
       "namespace": "project-tiger",
-      "machineHostname": "ckad9999",
+      "machineHostname": "cka9999",
       "question": "In namespace `project-tiger`, create a Pod named `tigers-reunite` using image `httpd:2-alpine` with labels `pod=container` and `container=pod`.\n\nFind the node it runs on. The cluster nodes are containers on `k8s-api-server`, so run `crictl` on the node with:\n\n```bash\nssh k8s-api-server \"docker exec <node> crictl ...\"\n```\n\n1. Write the container ID and its `info.runtimeType` to `/tmp/exam/17/pod-container.txt`.\n2. Write the container logs to `/tmp/exam/17/pod-container.log`. `crictl logs` writes container stdout and stderr to separate streams, so capture both.",
       "concepts": [
         "pods",

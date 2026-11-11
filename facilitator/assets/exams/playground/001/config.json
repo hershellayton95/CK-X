@@ -2,6 +2,6 @@
   "lab": "playground-001",
   "workerNodes": 2,
   "labType": "playground",
-  "machineHostname": "ckad9999",
+  "machineHostname": "playground9999",
   "questions": "assessment.json"
 }

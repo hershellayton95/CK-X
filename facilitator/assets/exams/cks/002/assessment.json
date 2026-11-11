@@ -3,8 +3,8 @@
     {
       "id": "1",
       "namespace": "orion",
-      "machineHostname": "ckad9999",
-      "question": "A pod called `app-xyz` has been created in the `orion` namespace. It uses a secret as environment variables.\n\n1. Extract the decoded value of the `CONNECTOR_PASSWORD` key from the Secret and save it to the file `/tmp/exam/secrets/CONNECTOR_PASSWORD` on `ckad9999`.\n2. Then recreate the pod so that instead of using the secret as an environment variable, the secret is mounted as a **read-only** volume at the path `/mnt/connector/password` for the application to use.\n\nYou may delete and recreate the pod.",
+      "machineHostname": "cks9999",
+      "question": "A pod called `app-xyz` has been created in the `orion` namespace. It uses a secret as environment variables.\n\n1. Extract the decoded value of the `CONNECTOR_PASSWORD` key from the Secret and save it to the file `/tmp/exam/secrets/CONNECTOR_PASSWORD` on `cks9999`.\n2. Then recreate the pod so that instead of using the secret as an environment variable, the secret is mounted as a **read-only** volume at the path `/mnt/connector/password` for the application to use.\n\nYou may delete and recreate the pod.",
       "concepts": [
         "secrets",
         "volumes",
@@ -37,7 +37,7 @@
     {
       "id": "2",
       "namespace": "prod-x12cs",
-      "machineHostname": "ckad9999",
+      "machineHostname": "cks9999",
       "question": "A pod called `redis-backend` exists in the `prod-x12cs` namespace and is exposed as a `ClusterIP` service on port `6379`.\n\nUsing a NetworkPolicy called `allow-redis-access` in the `prod-x12cs` namespace, lock down incoming connections to this pod to only:\n\n1. Any pod in the same namespace with the label `backend=prod-x12cs`\n2. All pods in the `prod-yx13cs` namespace (its namespace carries the label `access=redis` - use a namespaceSelector with the existing label)\n\nAll other incoming connections must be blocked. Select the pod with its existing label `run=redis-backend` and restrict traffic to TCP port `6379`.",
       "concepts": [
         "networkpolicies",
@@ -78,7 +78,7 @@
     {
       "id": "3",
       "namespace": "gamma",
-      "machineHostname": "ckad9999",
+      "machineHostname": "cks9999",
       "question": "A pod called `apps-cluster-dash` in the `gamma` namespace was created with the service account `cluster-view`, which has cluster-wide view permissions. The secret token is still mounted into the pod.\n\nSecure the pod so that the service account secret token is **no longer mounted** into it. You may delete and recreate the pod. Keep using the `cluster-view` service account.",
       "concepts": [
         "service accounts",
@@ -112,7 +112,7 @@
     {
       "id": "4",
       "namespace": "dev-z",
-      "machineHostname": "ckad9999",
+      "machineHostname": "cks9999",
       "question": "A developer called `martin` needs access to work on the `dev-a`, `dev-b` and `dev-z` namespaces:\n\n- In `dev-a` and `dev-b` he can perform **any** operation on any pod (this is already correct)\n- In `dev-z` he must only be allowed to `get` and `list` pods\n\nThe current setup in `dev-z` is too permissive. Fix the Role called `dev-user-access` in the `dev-z` namespace so it only grants `get` and `list` on pods. Do not change the roles in `dev-a` or `dev-b`, and keep the same role name.",
       "concepts": [
         "rbac",
@@ -153,7 +153,7 @@
     {
       "id": "5",
       "namespace": "dev",
-      "machineHostname": "ckad9999",
+      "machineHostname": "cks9999",
       "question": "In the `dev` namespace (create it if needed), create the following resources:\n\n1. A Role called `dev-write` granting `get`, `watch`, `list` and `create` on pods in the same namespace\n2. A ServiceAccount called `developer`\n3. A RoleBinding called `dev-write-binding` that binds the `dev-write` role to the `developer` ServiceAccount\n4. A pod using the template provided at `/tmp/exam/dev-pod.yaml`. The pod must run with the `developer` service account (update the template as necessary before creating it).",
       "concepts": [
         "rbac",
@@ -195,7 +195,7 @@
     {
       "id": "6",
       "namespace": "alpha",
-      "machineHostname": "ckad9999",
+      "machineHostname": "cks9999",
       "question": "Pods have been created in the `alpha` namespace. Delete every pod that is **not immutable**.\n\nA pod counts as immutable when its container sets `readOnlyRootFilesystem: true`. Remember the default when the field is not present.",
       "concepts": [
         "immutability",
@@ -229,7 +229,7 @@
     {
       "id": "7",
       "namespace": "omni",
-      "machineHostname": "ckad9999",
+      "machineHostname": "cks9999",
       "question": "A pod called `frontend-site` has been created in the `omni` namespace with more permissions than it needs. Several service accounts exist in the namespace (`fe`, `frontend`, `frontend-default`, plus `default`).\n\nApply the principle of least privilege:\n\n1. Recreate the pod `frontend-site` using the service account with the **minimum privileges** (excluding the `default` service account - inspect the RoleBindings to find which service account has no permissions).\n2. Once the pod runs under the correct service account, delete the other unused service accounts in `omni` (excluding `default` and the one you selected).",
       "concepts": [
         "service accounts",
@@ -263,7 +263,7 @@
     {
       "id": "8",
       "namespace": "production",
-      "machineHostname": "ckad9999",
+      "machineHostname": "cks9999",
       "question": "A pod called `busy-rx100` has been created in the `production` namespace. Secure the pod by recreating it with the RuntimeClass called `gvisor`. You may delete and recreate the pod.\n\nNote: the gvisor runtime itself is not installed in this cluster - the pod may not start. What matters is that the pod is correctly configured.",
       "concepts": [
         "runtime classes",

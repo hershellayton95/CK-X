@@ -39,7 +39,10 @@ browser :30080
 - **Data plane** (one per session): Docker Compose project `ckx-<session-id>`
   with `k8s-api-server`, `jumphost`, `remote-desktop`, `remote-terminal`, a
   private network `ckx-<session-id>-net`, and a kubeconfig volume
-  `ckx-<session-id>-kube`. The k3d cluster is
+  `ckx-<session-id>-kube`. The desktop and terminal also join the shared
+  `ckx-sessions` network, and each joins its own session network so candidates
+  keep the single-environment `ssh candidate@<category>9999` flow (the jumphost
+  hostname follows the lab category, e.g. `cka9999`). The k3d cluster is
   `ckx-<first 12 hex of the session id>`; its kubeconfig context is
   `k3d-ckx-<first 12 hex of the session id>`.
 - **Identity**: `POST /api/v1/exams` creates a Redis session record and sets an
@@ -282,9 +285,12 @@ rolling back:
   `ckx-<sid>-remote-desktop` / `ckx-<sid>-remote-terminal`. Without a session
   (flag off, anonymous, or after terminate) it falls back to the static
   single-environment targets.
-- Those two containers join the shared `ckx-sessions` control network once;
-  `k8s-api-server` and `jumphost` stay on the per-session network only. This
-  avoids runtime network attach/detach, which resets established sockets.
+- Those two containers join the shared `ckx-sessions` control network once for
+  webapp routing, and the session's own network so the desktop/browser terminal
+  can `ssh candidate@<category>9999` (the jumphost, e.g. `cka9999`) and reach
+  the cluster API.
+  `k8s-api-server` and `jumphost` stay on the per-session network only; no
+  runtime attach/detach is needed for the session containers.
 - Each session gets random VNC and SSH passwords. The terminal password stays
   server-side in the webapp; `/api/session-info` only exposes the VNC password
   the browser needs.

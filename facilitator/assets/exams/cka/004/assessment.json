@@ -3,7 +3,7 @@
     {
       "id": "1",
       "namespace": "default",
-      "machineHostname": "ckad9999",
+      "machineHostname": "cka9999",
       "question": "Create a pod named `nginx-pod` in the `default` namespace using the image `nginx:alpine`.\n\nThe pod must carry the label `run=nginx-pod`.",
       "concepts": [
         "pods",
@@ -30,7 +30,7 @@
     {
       "id": "2",
       "namespace": "default",
-      "machineHostname": "ckad9999",
+      "machineHostname": "cka9999",
       "question": "Create a pod named `messaging` in the `default` namespace using the image `redis:alpine`.\n\nThe pod must carry the label `tier=msg`.",
       "concepts": [
         "pods",
@@ -57,7 +57,7 @@
     {
       "id": "3",
       "namespace": "default",
-      "machineHostname": "ckad9999",
+      "machineHostname": "cka9999",
       "question": "Create a namespace named `apx-x9984574`.",
       "concepts": [
         "namespaces",
@@ -83,8 +83,8 @@
     {
       "id": "4",
       "namespace": "default",
-      "machineHostname": "ckad9999",
-      "question": "Export the full list of nodes in the cluster as JSON and save it to the file `/tmp/exam/outputs/nodes-z3444kd9.json` on `ckad9999`.\n\nThe file must be valid JSON containing every node in the cluster.",
+      "machineHostname": "cka9999",
+      "question": "Export the full list of nodes in the cluster as JSON and save it to the file `/tmp/exam/outputs/nodes-z3444kd9.json` on `cka9999`.\n\nThe file must be valid JSON containing every node in the cluster.",
       "concepts": [
         "kubectl",
         "json output",
@@ -110,7 +110,7 @@
     {
       "id": "5",
       "namespace": "default",
-      "machineHostname": "ckad9999",
+      "machineHostname": "cka9999",
       "question": "Expose the pod `messaging` on port `6379` with a service named `messaging-service`.\n\nThe service must select the `messaging` pod so it has endpoints.",
       "concepts": [
         "services",
@@ -137,7 +137,7 @@
     {
       "id": "6",
       "namespace": "default",
-      "machineHostname": "ckad9999",
+      "machineHostname": "cka9999",
       "question": "Create a deployment named `hr-web-app` in the `default` namespace with `2` replicas using the image `kodekloud/webapp-color`.\n\nThe pods must carry the label `app=hr-web-app`.",
       "concepts": [
         "deployments",
@@ -171,8 +171,8 @@
     {
       "id": "7",
       "namespace": "default",
-      "machineHostname": "ckad9999",
-      "question": "Create a static pod manifest for a pod named `static-busybox` on `ckad9999`.\n\nPlace the file at `/etc/kubernetes/manifests/static-busybox.yaml`. The pod must use the image `busybox`, run the command `sleep 1000`, and carry the label `run=static-busybox`.",
+      "machineHostname": "cka9999",
+      "question": "Create a static pod manifest for a pod named `static-busybox` on `cka9999`.\n\nPlace the file at `/etc/kubernetes/manifests/static-busybox.yaml`. The pod must use the image `busybox`, run the command `sleep 1000`, and carry the label `run=static-busybox`.",
       "concepts": [
         "static pods",
         "node configuration",
@@ -198,7 +198,7 @@
     {
       "id": "8",
       "namespace": "finance",
-      "machineHostname": "ckad9999",
+      "machineHostname": "cka9999",
       "question": "In the namespace `finance`, create a pod named `temp-bus` using the image `redis:alpine`.",
       "concepts": [
         "namespaces",
@@ -225,7 +225,7 @@
     {
       "id": "9",
       "namespace": "default",
-      "machineHostname": "ckad9999",
+      "machineHostname": "cka9999",
       "question": "The pod `orange` in the `default` namespace never starts - it is stuck because its container command contains a typo (`sleeeep`).\n\nTroubleshoot the pod and fix it so that it runs successfully. The container command must be `sleep 3000`.\n\nDo not delete the pod name - a pod named `orange` must still exist when you are done.",
       "concepts": [
         "troubleshooting",
@@ -259,7 +259,7 @@
     {
       "id": "10",
       "namespace": "default",
-      "machineHostname": "ckad9999",
+      "machineHostname": "cka9999",
       "question": "Create a service named `hr-web-app-service` in the `default` namespace for the `hr-web-app` deployment:\n\n- Type: `NodePort`\n- Port: `8080`\n- targetPort: `8080`\n- nodePort: `30082`\n- Selector: `app=hr-web-app`",
       "concepts": [
         "services",
@@ -286,8 +286,8 @@
     {
       "id": "11",
       "namespace": "default",
-      "machineHostname": "ckad9999",
-      "question": "Export the `osImage` of every node in the cluster, space-separated on a single line, to the file `/tmp/exam/outputs/nodes_os_x43kj56.txt` on `ckad9999`.\n\nUse kubectl JSONPath output - one entry per node.",
+      "machineHostname": "cka9999",
+      "question": "Export the `osImage` of every node in the cluster, space-separated on a single line, to the file `/tmp/exam/outputs/nodes_os_x43kj56.txt` on `cka9999`.\n\nUse kubectl JSONPath output - one entry per node.",
       "concepts": [
         "kubectl",
         "jsonpath",
@@ -313,7 +313,7 @@
     {
       "id": "12",
       "namespace": "default",
-      "machineHostname": "ckad9999",
+      "machineHostname": "cka9999",
       "question": "Create a PersistentVolume named `pv-analytics` with the following specifications:\n\n- Capacity: `100Mi`\n- accessMode: `ReadWriteMany`\n- volumeMode: `Filesystem`\n- hostPath path: `/pv/data-analytics`",
       "concepts": [
         "persistentvolumes",

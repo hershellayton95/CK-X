@@ -13,6 +13,7 @@ const redisClient = require('../utils/redisClient');
 const { getProvider } = require('./environment/provider');
 const logger = require('../utils/logger');
 const metrics = require('../utils/sessionMetrics');
+const { machineHostname } = require('../utils/machineHostname');
 
 /**
  * Generate the per-session VNC password
@@ -49,7 +50,14 @@ async function provisionForExam(sessionId, examId, nodeCount = 1) {
   let env;
 
   try {
-    env = await provider.createSession({ sessionId, examId, vncPassword, terminalPassword });
+    env = await provider.createSession({
+      sessionId,
+      examId,
+      vncPassword,
+      terminalPassword,
+      // CKA candidates get cka9999, CKAD candidates ckad9999, etc.
+      machineHostname: machineHostname(session.category)
+    });
   } catch (error) {
     metrics.recordSessionFailed();
     logger.error(`Failed to create environment for exam ${examId}`, {

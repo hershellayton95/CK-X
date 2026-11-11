@@ -120,7 +120,7 @@ The deployment name `hr-web-app` does **not** automatically give the pods an `ap
 
 ### Solution
 
-Create `/etc/kubernetes/manifests/static-busybox.yaml` on `ckad9999`:
+Create `/etc/kubernetes/manifests/static-busybox.yaml` on `cka9999`:
 
 ```yaml
 apiVersion: v1
@@ -155,7 +155,7 @@ EOF
 
 ### Explanation
 
-Static pods are declared as manifest files in the kubelet's static pod path (`/etc/kubernetes/manifests` on `ckad9999`). The kubelet watches that directory and creates the pod - no API object is submitted by you. The verification checks the file's content: kind, name, image, command, and label.
+Static pods are declared as manifest files in the kubelet's static pod path (`/etc/kubernetes/manifests` on `cka9999`). The kubelet watches that directory and creates the pod - no API object is submitted by you. The verification checks the file's content: kind, name, image, command, and label.
 
 ## Question 8: Pod temp-bus in namespace finance
 

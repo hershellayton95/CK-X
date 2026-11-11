@@ -69,7 +69,10 @@ The VNC server is not directly exposed outside the container network. To access 
 
 SSH access is provided through the jumphost service:
 
-- **Hostname**: ckad9999
+- **Hostname**: follows the certification - `cka9999` for CKA, `ckad9999` for
+  CKAD, `cks9999` for CKS, `kcna9999`, `kcsa9999`, `playground9999`, and
+  `other9999`. Every name is a network alias of the same jumphost, so older lab
+  text that says `ckad9999` still works.
 - **Username**: candidate
 - **Password**: `password` in single-environment mode; random per session in multisession mode (never sent to the browser)
 
@@ -313,8 +316,11 @@ Multisession adds two network layers:
 
 - `ckx-sessions` (shared): `webapp` and every session's `remote-desktop` /
   `remote-terminal`, so the webapp proxies each browser to the right container.
-- `ckx-<session-id>-net` (per session): `k8s-api-server`, `jumphost`, and the
-  facilitator (attached at runtime so setup/grading can reach the jumphost).
+- `ckx-<session-id>-net` (per session): `k8s-api-server`, `jumphost`,
+  `remote-desktop`, `remote-terminal`, and the facilitator (attached at runtime
+  so setup/grading can reach the jumphost). Joining the desktop/terminal to the
+  session network keeps the single-env SSH flow (`ssh candidate@<category>9999`,
+  e.g. `cka9999` for a CKA lab) working.
 
 Services inside one session talk to each other by service name
 (`k8s-api-server`, `jumphost`, `remote-desktop`, `remote-terminal`). Those names

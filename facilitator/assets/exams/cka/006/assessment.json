@@ -3,7 +3,7 @@
     {
       "id": "1",
       "namespace": "rbac-ex04",
-      "machineHostname": "ckad9999",
+      "machineHostname": "cka9999",
       "question": "In namespace `rbac-ex04`:\n\n1. Create a ServiceAccount named `dev-sa`.\n2. Create a Role named `pod-manager` that grants:\n   - `get`, `list`, `watch`, `create`, `delete` on `pods`\n   - `get`, `list` on `services`\n   - `patch` on the `deployments/scale` **subresource** (API group `apps`)\n3. Create a RoleBinding named `dev-pod-access` that binds Role `pod-manager` to ServiceAccount `dev-sa`.\n4. Create a ClusterRole named `node-viewer` granting `get`, `list` on `nodes`, and a ClusterRoleBinding named `dev-node-access` binding it to `dev-sa`.\n\nYou can verify the result with `kubectl auth can-i <verb> <resource> -n rbac-ex04 --as=system:serviceaccount:rbac-ex04:dev-sa` (for the scale subresource: `kubectl auth can-i patch deployments --subresource=scale ...`). The ServiceAccount must NOT gain any permissions outside the `rbac-ex04` namespace (listing nodes cluster-wide is the only exception).",
       "concepts": [
         "rbac",
@@ -47,7 +47,7 @@
     {
       "id": "2",
       "namespace": "sidecar-ex02",
-      "machineHostname": "ckad9999",
+      "machineHostname": "cka9999",
       "question": "In namespace `sidecar-ex02`, create a Deployment named `logger` with **1 replica** and label `app=logger` that uses the native sidecar pattern:\n\n1. Main container `app` (image `busybox:1.36`) that appends a line to `/var/log/app/app.log` every 3 seconds:\n`sh -c 'while true; do echo \"$(date) - app running\" >> /var/log/app/app.log; sleep 3; done'`\n2. An **init container** named `log-agent` (image `busybox:1.36`) with `restartPolicy: Always` - that is what makes it a native sidecar - running `sh -c 'tail -F /var/log/app/app.log'`\n3. Both containers must mount the same `emptyDir` volume named `log-volume` at `/var/log/app`.\n\nWait until the Pod is Ready with both containers running so the sidecar streams the application log.",
       "concepts": [
         "native sidecar",
@@ -83,7 +83,7 @@
     {
       "id": "3",
       "namespace": "ingress-ex19",
-      "machineHostname": "ckad9999",
+      "machineHostname": "cka9999",
       "question": "In namespace `ingress-ex19` two Services already exist: `web-service` (port `80`) and `api-service` (port `8080`), backed by the Deployments `web-app` and `api-app`. A TLS Secret named `api-tls-cert` has also been created.\n\nCreate a single Ingress named `web-ingress` in `ingress-ex19`:\n\n1. Set `ingressClassName` to `nginx`.\n2. Terminate TLS for host `api.example.com` using the Secret `api-tls-cert`.\n3. Rule for host `web.example.com`: path `/` (type `Prefix`) routed to Service `web-service` port `80`.\n4. Rule for host `api.example.com`: path `/api` (type `Prefix`) routed to Service `api-service` port `8080`.",
       "concepts": [
         "ingress",
@@ -126,7 +126,7 @@
     {
       "id": "4",
       "namespace": "resource-tuning",
-      "machineHostname": "ckad9999",
+      "machineHostname": "cka9999",
       "question": "In namespace `resource-tuning` a ResourceQuota named `compute-quota` limits total container requests to `1` CPU and `2Gi` memory (and at most 10 pods).\n\nThe Deployment `web` (3 replicas, image `nginx:1.27`, label `app=web`) declares requests of `1200m` CPU and `1Gi` memory per container - even a single pod asks for more CPU than the whole quota allows, so the ReplicaSet cannot create any pods and the API rejects them with `exceeded quota: compute-quota` (check the ReplicaSet events).\n\nFix the Deployment so all 3 replicas run:\n\n1. Keep declaring both `requests.cpu` and `requests.memory` on the container - do not remove them, and do not delete or edit the ResourceQuota.\n2. Lower the per-container requests so that the total for 3 replicas fits within the quota.\n3. Wait until all 3 pods are Running.",
       "concepts": [
         "resource quotas",
@@ -168,7 +168,7 @@
     {
       "id": "5",
       "namespace": "wffc-ex25",
-      "machineHostname": "ckad9999",
+      "machineHostname": "cka9999",
       "question": "In namespace `wffc-ex25`:\n\n1. Create a StorageClass named `local-wffc` with provisioner `rancher.io/local-path` and `volumeBindingMode: WaitForFirstConsumer`.\n2. Create a PersistentVolumeClaim named `local-pvc` (1Gi, `ReadWriteOnce`, storageClassName `local-wffc`). It will stay `Pending` - that is expected until a Pod consumes it.\n3. Create a Deployment named `app` (1 replica, image `busybox:1.36`, command `sleep 3600`, label `app=app`) that mounts `local-pvc` at `/data`.\n\nOnce the Pod is scheduled the claim should bind and the Pod must run.",
       "concepts": [
         "storageclasses",
@@ -203,7 +203,7 @@
     {
       "id": "6",
       "namespace": "drain-ex08",
-      "machineHostname": "ckad9999",
+      "machineHostname": "cka9999",
       "question": "Node `k3d-cluster-agent-1` needs maintenance.\n\n1. Cordon the node so it is marked `SchedulingDisabled`.\n2. Drain it. The drain must succeed despite DaemonSet-managed pods and pods that hold data on the node's filesystem - use the appropriate `kubectl drain` flags.\n3. Confirm the pods of the Job `drain-marker` in namespace `drain-ex08` (created by the lab setup on that node) have been evicted - no `drain-marker` pods should remain.\n4. Uncordon the node.\n5. Scale the Deployment `drain-demo` in namespace `drain-ex08` from 2 to 4 replicas and confirm the new Pods also land on the now-schedulable `k3d-cluster-agent-1`.",
       "concepts": [
         "node drain",
@@ -247,7 +247,7 @@
     {
       "id": "7",
       "namespace": "rollout-ex06",
-      "machineHostname": "ckad9999",
+      "machineHostname": "cka9999",
       "question": "In namespace `rollout-ex06`:\n\n1. Create a Deployment named `webapp` (3 replicas, image `nginx:1.27`, label `app=webapp`) with strategy `RollingUpdate`, `maxSurge: 1`, `maxUnavailable: 0`.\n2. Record the change cause with the annotation `kubernetes.io/change-cause` = `initial deploy nginx:1.27`.\n3. Update the image to `nginx:1.28` and record change cause `update to nginx:1.28` (the annotation lives on the Deployment object itself, so you will need `--overwrite`).\n4. Wait for the rollout to finish, then roll back to the previous revision so the Deployment runs `nginx:1.27` again.",
       "concepts": [
         "deployments",
@@ -290,7 +290,7 @@
     {
       "id": "8",
       "namespace": "cron-ex21",
-      "machineHostname": "ckad9999",
+      "machineHostname": "cka9999",
       "question": "In namespace `cron-ex21` create a CronJob named `db-cleanup`:\n\n1. Schedule: `*/5 * * * *`\n2. `concurrencyPolicy: Forbid`\n3. Job template: container name `cleanup`, image `busybox:1.37`, command `sh -c 'echo cleanup; date'`, `backoffLimit: 2`, `restartPolicy: Never`\n4. Trigger it once manually: create a Job named `db-cleanup-manual` from the CronJob (`kubectl create job db-cleanup-manual --from=cronjob/db-cleanup`) and wait for it to complete successfully.",
       "concepts": [
         "cronjobs",
@@ -326,7 +326,7 @@
     {
       "id": "9",
       "namespace": "prod",
-      "machineHostname": "ckad9999",
+      "machineHostname": "cka9999",
       "question": "In namespace `prod` the Deployment `payments-api` is stuck in CrashLoopBackOff. The container (named `app`, image `busybox:1.36`) exits with status 1 because it expects a configuration file at `/etc/app/app.env` that does not exist.\n\nFix it without changing the Deployment's command:\n\n1. Create a ConfigMap named `payments-config` in `prod` with a key `app.env` whose value contains the line `DB_HOST=postgres.prod.svc.cluster.local`.\n2. Mount the ConfigMap into the Deployment at `/etc/app` so the file appears at `/etc/app/app.env`.\n3. Wait until the Pod is Running and Ready.",
       "concepts": [
         "crashloopbackoff",
@@ -361,7 +361,7 @@
     {
       "id": "10",
       "namespace": "job-ex21",
-      "machineHostname": "ckad9999",
+      "machineHostname": "cka9999",
       "question": "In namespace `job-ex21` create a Job named `cleanup-job`:\n\n1. Image `busybox:1.37` running the command `echo \"Cleanup complete\"`.\n2. `restartPolicy: Never`\n3. Run it three times successfully: `completions: 3` with `parallelism: 1` (the three runs happen one after another).\n4. Wait until the Job reports 3/3 completions.",
       "concepts": [
         "jobs",
