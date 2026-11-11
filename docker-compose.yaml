@@ -1,3 +1,14 @@
+# Single-environment jumphost serves every category, so it must answer to all
+# of these names. Keep in sync with facilitator/src/utils/machineHostname.js.
+x-machine-hostnames: &machine-hostnames
+  - cka9999
+  - ckad9999
+  - cks9999
+  - kcna9999
+  - kcsa9999
+  - playground9999
+  - other9999
+
 services:
   # VNC Server (Ubuntu)
   remote-desktop:
@@ -94,9 +105,9 @@ services:
     networks:
       - ckx-network
 
-  # Jump Host. The name follows the certification (cka9999 for CKA, ckad9999
-  # for CKAD, ...). `ckad9999` stays aliased for older lab text; the category
-  # name itself resolves from `hostname`.
+  # Jump Host. One container serves every category in single-environment mode,
+  # so every category name is aliased below. `hostname` stays configurable for
+  # deployments that only run one certification.
   jumphost:
     image: ckx/ck-x-jumphost:${SESSION_IMAGE_TAG:-dev}
     build:
@@ -121,8 +132,7 @@ services:
           memory: 512M
     networks:
       ckx-network:
-        aliases:
-          - ckad9999
+        aliases: *machine-hostnames
     healthcheck:
       test: ["CMD", "nc", "-z", "localhost", "22"]
       interval: 10s

@@ -71,10 +71,10 @@ SSH access is provided through the jumphost service:
 
 - **Hostname**: follows the certification - `cka9999` for CKA, `ckad9999` for
   CKAD, `cks9999` for CKS, `kcna9999`, `kcsa9999`, `playground9999`, and
-  `other9999`. `ckad9999` is also kept as an alias for older lab text. In
-  single-environment mode the container hostname is fixed at start
-  (`MACHINE_HOSTNAME`, default `ckad9999`), so the other names only resolve as
-  aliases there.
+  `other9999`. In single-environment mode one jumphost serves every category,
+  so all of these names are network aliases; the container hostname itself is
+  fixed at start (`MACHINE_HOSTNAME`, default `ckad9999`). Multisession keeps
+  the `ckad9999` alias for older lab text.
 - **Username**: candidate
 - **Password**: `password` in single-environment mode; random per session in multisession mode (never sent to the browser)
 
