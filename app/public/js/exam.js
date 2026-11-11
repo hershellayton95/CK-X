@@ -441,9 +441,7 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log('Setting exam start time:', currentTime);
             
             ExamApi.trackExamEvent(examId, {
-                examStartTime: currentTime,
-                userAgent: navigator.userAgent,
-                screenResolution: `${window.screen.width}x${window.screen.height}`
+                examStartTime: currentTime
             });
         }
     }
