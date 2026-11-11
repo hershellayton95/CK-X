@@ -12,7 +12,7 @@ x-machine-hostnames: &machine-hostnames
 services:
   # VNC Server (Ubuntu)
   remote-desktop:
-    image: ckx/ck-x-remote-desktop:${SESSION_IMAGE_TAG:-dev}
+    image: ${CKX_REGISTRY:-ckx}/ck-x-remote-desktop:${SESSION_IMAGE_TAG:-dev}
     build:
       context: ./remote-desktop
     hostname: terminal
@@ -43,7 +43,7 @@ services:
 
   # Web Application (not directly exposed to users)
   webapp:
-    image: ckx/ck-x-webapp:${SESSION_IMAGE_TAG:-dev}
+    image: ${CKX_REGISTRY:-ckx}/ck-x-webapp:${SESSION_IMAGE_TAG:-dev}
     build:
       context: ./app
     expose:
@@ -78,7 +78,7 @@ services:
 
   # Nginx Reverse Proxy - ONLY SERVICE EXPOSED TO USERS
   nginx:
-    image: ckx/ck-x-nginx:${SESSION_IMAGE_TAG:-dev}
+    image: ${CKX_REGISTRY:-ckx}/ck-x-nginx:${SESSION_IMAGE_TAG:-dev}
     build:
       context: ./nginx
     depends_on:
@@ -109,7 +109,7 @@ services:
   # so every category name is aliased below. `hostname` stays configurable for
   # deployments that only run one certification.
   jumphost:
-    image: ckx/ck-x-jumphost:${SESSION_IMAGE_TAG:-dev}
+    image: ${CKX_REGISTRY:-ckx}/ck-x-jumphost:${SESSION_IMAGE_TAG:-dev}
     build:
       context: ./jumphost
     hostname: ${MACHINE_HOSTNAME:-ckad9999}
@@ -141,7 +141,7 @@ services:
 
   # Remote Terminal Service
   remote-terminal:
-    image: ckx/ck-x-remote-terminal:${SESSION_IMAGE_TAG:-dev}
+    image: ${CKX_REGISTRY:-ckx}/ck-x-remote-terminal:${SESSION_IMAGE_TAG:-dev}
     build:
       context: ./remote-terminal
     hostname: remote-terminal
@@ -165,7 +165,7 @@ services:
 
   # KIND Kubernetes Cluster
   k8s-api-server: # Service name that will be used for DNS resolution
-    image: ckx/ck-x-k8s-api-server:${SESSION_IMAGE_TAG:-dev}
+    image: ${CKX_REGISTRY:-ckx}/ck-x-k8s-api-server:${SESSION_IMAGE_TAG:-dev}
     build:
       context: ./kind-cluster
     container_name: kind-cluster
@@ -219,7 +219,7 @@ services:
 
   # Facilitator Service
   facilitator:
-    image: ckx/ck-x-facilitator:${SESSION_IMAGE_TAG:-dev}
+    image: ${CKX_REGISTRY:-ckx}/ck-x-facilitator:${SESSION_IMAGE_TAG:-dev}
     build:
       context: ./facilitator
       dockerfile: Dockerfile
@@ -250,6 +250,9 @@ services:
       - INTERNAL_TOKEN=${INTERNAL_TOKEN:-}
       - FACILITATOR_URL=${FACILITATOR_URL:-http://facilitator:3000}
       - SESSION_IMAGE_TAG=${SESSION_IMAGE_TAG:-dev}
+      # Registry prefix for the per-session images; keep in sync with the
+      # root compose so `docker compose pull` and session creation agree.
+      - CKX_REGISTRY=${CKX_REGISTRY:-ckx}
       - EXAM_DATA_TTL_SECONDS=${EXAM_DATA_TTL_SECONDS:-28800}
       - SESSION_TTL_SECONDS=${SESSION_TTL_SECONDS:-28800}
       - SESSION_IDLE_SECONDS=${SESSION_IDLE_SECONDS:-1800}

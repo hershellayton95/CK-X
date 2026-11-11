@@ -44,7 +44,36 @@ docker compose up -d --build
 ```
 
 This command builds and starts all services defined in `docker-compose.yaml`.
-Images are tagged `ckx/<service>:${SESSION_IMAGE_TAG:-dev}`.
+Images are tagged `${CKX_REGISTRY:-ckx}/<service>:${SESSION_IMAGE_TAG:-dev}`.
+
+### 2b. Published images (GHCR)
+
+`.github/workflows/publish-images.yml` builds all seven CK-X images and pushes
+them to GitHub Container Registry as `ghcr.io/<owner>/ck-x-*`:
+
+- triggers: pushing a `vX.Y.Z` tag, or running the workflow manually on
+  `master` (the manual button appears once the workflow is on the default
+  branch);
+- tags: `X.Y.Z`, `X.Y`, `sha-<short>`, and `latest` (tag pushes and manual
+  `master` runs);
+- auth: the built-in `GITHUB_TOKEN`, no extra secrets.
+
+Use the published images instead of building locally:
+
+```bash
+# .env
+CKX_REGISTRY=ghcr.io/<owner>
+SESSION_IMAGE_TAG=latest
+```
+
+```bash
+docker compose pull
+docker compose up -d
+```
+
+Private packages need `docker login ghcr.io` first; public packages need
+nothing. The facilitator forwards `CKX_REGISTRY` into the per-session compose,
+so session stacks pull from the same registry.
 
 ## Accessing the Application
 

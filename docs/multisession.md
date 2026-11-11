@@ -82,6 +82,7 @@ Roll back by setting it back to `false`.
 | `INTERNAL_TOKEN` | — | Shared secret for service-to-service calls (per-session jumphost asset download). Required when enabled; production refuses to start if missing or shorter than 16 characters. |
 | `FACILITATOR_URL` | `http://facilitator:3000` | Asset URL used by per-session jumphosts. |
 | `SESSION_IMAGE_TAG` | `dev` | Image tag built by the root compose and used by per-session stacks. |
+| `CKX_REGISTRY` | `ckx` | Registry/namespace prefix for every image. Set `ghcr.io/<owner>` to use published images; the facilitator passes it into the session compose. |
 | `SESSION_CONTROL_NETWORK` | `ckx-sessions` | Shared network the webapp and every session desktop/terminal join, so the webapp routes each browser without runtime network attach/detach. |
 | `SESSION_TTL_SECONDS` | `28800` | Hard session deadline. The Redis record and session cookie never outlive it. |
 | `SESSION_IDLE_SECONDS` | `1800` | Reap a session with no API/heartbeat activity for this long. `0` disables idle expiry (hard TTL still applies). |
@@ -99,8 +100,9 @@ The facilitator provisions one Docker Compose stack per candidate:
 - the host Docker socket mounted into the facilitator
   (`/var/run/docker.sock`);
 - the facilitator image includes the Docker CLI and compose plugin;
-- all images built by the root compose with the same `SESSION_IMAGE_TAG`
-  (`docker compose build`, default tag `dev`).
+- all images available with the same `SESSION_IMAGE_TAG`: build them locally
+  (`docker compose build`, default tag `dev`) or pull them from the registry
+  set in `CKX_REGISTRY`.
 
 Each stack runs a nested k3d/k3s cluster inside its own `k8s-api-server`
 container. The host kernel therefore needs the modules k3s networking and

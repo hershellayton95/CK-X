@@ -15,7 +15,7 @@ x-ckx-labels: &ckx-labels
 services:
   # k3d/k3s cluster host
   k8s-api-server:
-    image: ckx/ck-x-k8s-api-server:${SESSION_IMAGE_TAG:-dev}
+    image: ${CKX_REGISTRY:-ckx}/ck-x-k8s-api-server:${SESSION_IMAGE_TAG:-dev}
     container_name: ckx-${SESSION_ID}-k8s-api-server
     hostname: k8s-api-server
     privileged: true # Required for running containers inside the cluster host
@@ -46,7 +46,7 @@ services:
 
   # SSH target used by the facilitator for setup, grading and cleanup
   jumphost:
-    image: ckx/ck-x-jumphost:${SESSION_IMAGE_TAG:-dev}
+    image: ${CKX_REGISTRY:-ckx}/ck-x-jumphost:${SESSION_IMAGE_TAG:-dev}
     container_name: ckx-${SESSION_ID}-jumphost
     # Category-aligned name (cka9999 for CKA, ckad9999 for CKAD, ...).
     # `ckad9999` stays aliased for older lab text.
@@ -81,7 +81,7 @@ services:
   # Per-session VNC desktop. Only the webapp talks to it, over the shared
   # control network, so no per-session network attachment is needed.
   remote-desktop:
-    image: ckx/ck-x-remote-desktop:${SESSION_IMAGE_TAG:-dev}
+    image: ${CKX_REGISTRY:-ckx}/ck-x-remote-desktop:${SESSION_IMAGE_TAG:-dev}
     container_name: ckx-${SESSION_ID}-remote-desktop
     hostname: terminal
     shm_size: 512m # Electron and Firefox share memory through /dev/shm
@@ -118,7 +118,7 @@ services:
   # SSH target used by the browser terminal. Shared control network only, with
   # a per-session password so sessions cannot log into each other.
   remote-terminal:
-    image: ckx/ck-x-remote-terminal:${SESSION_IMAGE_TAG:-dev}
+    image: ${CKX_REGISTRY:-ckx}/ck-x-remote-terminal:${SESSION_IMAGE_TAG:-dev}
     container_name: ckx-${SESSION_ID}-remote-terminal
     hostname: remote-terminal
     expose:
