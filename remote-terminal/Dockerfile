@@ -15,6 +15,10 @@ RUN echo "UserKnownHostsFile=/dev/null" >> /etc/ssh/ssh_config
 # Copy the MOTD file
 COPY motd /etc/motd
 
+# Entrypoint applies the per-session password before starting sshd
+COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
 # Generate SSH host keys (necessary for SSH to work)
 RUN ssh-keygen -A
 
@@ -22,4 +26,4 @@ RUN ssh-keygen -A
 EXPOSE 22
 
 # Start SSH daemon when the container runs
-CMD ["/usr/sbin/sshd", "-D"]
+CMD ["/usr/local/bin/entrypoint.sh"]

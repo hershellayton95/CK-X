@@ -246,7 +246,9 @@ document.addEventListener('DOMContentLoaded', function() {
         fetch(`/facilitator/api/v1/exams/${examId}/status`)
             .then(response => {
                 if (!response.ok) {
-                    throw new Error(`HTTP error! Status: ${response.status}`);
+                    const error = new Error(`HTTP error! Status: ${response.status}`);
+                    error.status = response.status;
+                    throw error;
                 }
                 return response.json();
             })
@@ -268,6 +270,11 @@ document.addEventListener('DOMContentLoaded', function() {
             })
             .catch(error => {
                 console.error('Error checking exam status:', error);
+                if (error.status === 401 || error.status === 403 || error.status === 404) {
+                    stopPolling();
+                    showError('This exam belongs to another session, or your session has expired. Please return to the dashboard.');
+                    return;
+                }
                 // Don't stop polling on network errors - will retry on next interval
             });
     }
@@ -302,7 +309,13 @@ document.addEventListener('DOMContentLoaded', function() {
                         // If results not found, check status to see if we need to start polling
                         return checkResultsStatus(examId);
                     }
-                    throw new Error(`HTTP error! Status: ${response.status}`);
+                    const error = new Error(
+                        (response.status === 401 || response.status === 403)
+                            ? 'This exam belongs to another session, or your session has expired.'
+                            : `HTTP error! Status: ${response.status}`
+                    );
+                    error.status = response.status;
+                    throw error;
                 }
                 return response.json();
             })
@@ -324,6 +337,7 @@ document.addEventListener('DOMContentLoaded', function() {
             })
             .catch(error => {
                 console.error('Error loading exam results:', error);
+                if (error.status === 401 || error.status === 403) stopPolling();
                 showError(error.message || 'Failed to load exam results');
                 
                 // Reset the Re-evaluate button state if it was disabled

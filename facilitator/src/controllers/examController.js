@@ -1,5 +1,8 @@
 const logger = require('../utils/logger');
 const examService = require('../services/examService');
+const sessionService = require('../services/sessionService');
+const sessionCookie = require('../utils/sessionCookie');
+const config = require('../config');
 const fs = require('fs');
 const path = require('path');
 const redisClient = require('../utils/redisClient');
@@ -13,26 +16,111 @@ const MetricService = require('../services/metricService');
 async function createExam(req, res) {
   logger.info('Received request to create a new exam', { examData: req.body });
   
-  const result = await examService.createExam(req.body);
-  
-  if (!result.success) {
-    // Handle the specific case of an exam already existing
-    if (result.error === 'Exam already exists') {
-      return res.status(409).json({ 
+  const multisession = config.multisession.enabled;
+  let session = req.session || null;
+
+  try {
+    if (multisession) {
+      // A session can own only one exam. Let the UI resume or terminate it.
+      if (session && session.examId) {
+        return res.status(409).json({
+          error: 'Exam already exists',
+          message: 'Your session already has an active exam. Resume or terminate it before starting a new one.',
+          currentExamId: session.examId,
+          sessionId: session.id
+        });
+      }
+
+      // Only new sessions consume a slot; retries of a failed create reuse
+      // the already-counted session.
+      if (!session) {
+        const admission = await sessionService.admitSession();
+        if (!admission.admitted) {
+          logger.warn(`Refusing new session: ${admission.active}/${admission.max} active`);
+          res.setHeader('Retry-After', '30');
+          return res.status(429).json({
+            error: 'Too Many Requests',
+            message: `Server busy: ${admission.active}/${admission.max} lab sessions are active. Try again shortly.`,
+            activeSessions: admission.active,
+            maxSessions: admission.max
+          });
+        }
+
+        session = await sessionService.createSession({
+          status: 'CREATED',
+          labId: req.body.id || null,
+          labName: req.body.name || null,
+          category: req.body.category || null
+        });
+      } else {
+        session = await sessionService.updateSession(session.id, {
+          status: 'CREATED',
+          labId: req.body.id || null,
+          labName: req.body.name || null,
+          category: req.body.category || null
+        }) || session;
+      }
+    }
+
+    const result = await examService.createExam(req.body, {
+      multisession,
+      sessionId: session ? session.id : undefined
+    });
+
+    if (!result.success) {
+      // Do not leave an empty session behind when provisioning never started.
+      if (multisession && session && !session.examId) {
+        await sessionService.deleteSession(session.id);
+      }
+
+      // Handle the specific case of an exam already existing
+      if (result.error === 'Exam already exists') {
+        return res.status(409).json({
+          error: result.error,
+          message: result.message,
+          currentExamId: result.currentExamId
+        });
+      }
+
+      // Handle other errors
+      return res.status(500).json({
         error: result.error,
-        message: result.message,
-        currentExamId: result.currentExamId
+        message: result.message
       });
     }
-    
-    // Handle other errors
-    return res.status(500).json({ 
-      error: result.error,
-      message: result.message
+
+    if (multisession) {
+      const updated = await sessionService.updateSession(session.id, {
+        examId: result.data.id,
+        status: result.data.status
+      });
+      session = updated || session;
+      req.session = session;
+      sessionCookie.setSessionCookie(req, res, session.id);
+
+      return res.status(201).json({
+        ...result.data,
+        sessionId: session.id
+      });
+    }
+
+    return res.status(201).json(result.data);
+  } catch (error) {
+    logger.error('Error creating exam', { error: error.message });
+
+    if (multisession && session && !session.examId) {
+      try {
+        await sessionService.deleteSession(session.id);
+      } catch (cleanupError) {
+        logger.error(`Failed to roll back session ${session.id}`, { error: cleanupError.message });
+      }
+    }
+
+    return res.status(500).json({
+      error: 'Failed to create exam',
+      message: error.message
     });
   }
-  
-  return res.status(201).json(result.data);
 }
 
 /**
@@ -43,7 +131,21 @@ async function createExam(req, res) {
 async function getCurrentExam(req, res) {
   logger.info('Received request to get current exam');
   
-  const result = await examService.getCurrentExam();
+  let result;
+  if (config.multisession.enabled) {
+    // The current exam is whatever the caller's session owns. No cookie (or a
+    // session without an exam) behaves like "no current exam" for the UI.
+    if (!req.session || !req.session.examId) {
+      return res.status(404).json({ message: 'No current exam is active' });
+    }
+
+    result = await examService.getCurrentExam(req.session.examId);
+    if (result.success) {
+      result.data.sessionId = req.session.id;
+    }
+  } else {
+    result = await examService.getCurrentExam();
+  }
   
   if (!result.success) {
     if (result.error === 'Not Found') {
@@ -151,7 +253,7 @@ async function evaluateExam(req, res) {
   
   logger.info('Received request to evaluate exam', { examId, data: req.body });
   
-  const result = await examService.evaluateExam(examId, req.body);
+  const result = await examService.evaluateExam(examId, req.body, { session: req.session });
   
   if (!result.success) {
     return res.status(500).json({ 
@@ -172,8 +274,41 @@ async function endExam(req, res) {
   const examId = req.params.examId;
   
   logger.info('Received request to end exam', { examId });
-  
-  const result = await examService.endExam(examId);
+
+  // Multisession: destroying a session stack removes its Docker network, and
+  // that resets the HTTP connection this response is travelling on (clients
+  // see an empty reply). Free the session, answer, then tear the environment
+  // down in the background; startup reconciliation handles stacks left behind
+  // by a crash.
+  if (config.multisession.enabled && req.session) {
+    try {
+      await sessionService.deleteSession(req.session.id);
+      sessionCookie.clearSessionCookie(req, res);
+    } catch (error) {
+      logger.error(`Exam ${examId} ended but session ${req.session.id} could not be removed`, {
+        error: error.message
+      });
+    }
+
+    res.status(200).json({
+      examId,
+      status: 'COMPLETED',
+      message: 'Exam completed successfully'
+    });
+
+    examService.endExam(examId, { session: req.session })
+      .then(result => {
+        if (!result.success) {
+          logger.error(`Background cleanup failed for exam ${examId}`, { error: result.error });
+        }
+      })
+      .catch(error => {
+        logger.error(`Background cleanup failed for exam ${examId}`, { error: error.message });
+      });
+    return;
+  }
+
+  const result = await examService.endExam(examId, { session: req.session });
   
   if (!result.success) {
     return res.status(500).json({ 
@@ -181,7 +316,7 @@ async function endExam(req, res) {
       message: result.message
     });
   }
-  
+
   return res.status(200).json(result.data);
 }
 

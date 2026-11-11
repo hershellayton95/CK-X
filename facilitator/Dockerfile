@@ -3,8 +3,9 @@ FROM node:18-alpine
 # Create app directory
 WORKDIR /usr/src/app
 
-# Install app dependencies and SSH client for connecting to jumphost
-RUN apk add --no-cache openssh-client
+# Install app dependencies, SSH client for connecting to jumphost, and the
+# Docker CLI + compose plugin used to provision per-session environments.
+RUN apk add --no-cache openssh-client docker-cli docker-cli-compose
 
 # Install dependencies
 # A wildcard is used to ensure both package.json AND package-lock.json are copied

@@ -7,9 +7,41 @@ class RouteService {
     }
 
     setupRoutes(app) {
-        // API endpoint to get VNC server info
-        app.get('/api/vnc-info', (req, res) => {
-            res.json(this.vncService.getVNCInfo());
+        // Session-aware connection info: which desktop/terminal belongs to the
+        // caller. Single-environment deployments get the static config.
+        app.get('/api/session-info', async (req, res) => {
+            try {
+                const vnc = await this.vncService.getVNCInfo(req);
+                res.json({
+                    ...vnc,
+                    terminal: {
+                        // The browser terminal is a socket.io connection; the
+                        // server resolves the SSH target itself.
+                        transport: 'socket.io',
+                        namespace: '/ssh',
+                        sessionId: vnc.sessionId
+                    }
+                });
+            } catch (error) {
+                console.error(`Failed to build session info: ${error.message}`);
+                res.status(502).json({
+                    error: 'Session lookup failed',
+                    message: error.message
+                });
+            }
+        });
+
+        // Backwards-compatible alias used by older frontends.
+        app.get('/api/vnc-info', async (req, res) => {
+            try {
+                res.json(await this.vncService.getVNCInfo(req));
+            } catch (error) {
+                console.error(`Failed to build VNC info: ${error.message}`);
+                res.status(502).json({
+                    error: 'Session lookup failed',
+                    message: error.message
+                });
+            }
         });
 
         // Health check endpoint
@@ -40,4 +72,4 @@ class RouteService {
     }
 }
 
-module.exports = RouteService; 
+module.exports = RouteService;

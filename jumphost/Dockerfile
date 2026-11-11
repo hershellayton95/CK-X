@@ -83,10 +83,12 @@ RUN chown -R candidate: /home/candidate/.kube /home/candidate/.minikube
 # Copy exam environment scripts
 COPY scripts/prepare-exam-env.sh /usr/local/bin/prepare-exam-env
 COPY scripts/cleanup-exam-env.sh /usr/local/bin/cleanup-exam-env
+COPY scripts/start-jumphost.sh /usr/local/bin/start-jumphost
 
 # Make scripts executable
 RUN chmod +x /usr/local/bin/prepare-exam-env
 RUN chmod +x /usr/local/bin/cleanup-exam-env
+RUN chmod +x /usr/local/bin/start-jumphost
 
 RUN mkdir -p /tmp/exam-env
 
@@ -111,4 +113,4 @@ RUN useradd -r -s /usr/sbin/nologin sshd
 ENV CLUSTER_NAME=cluster
 
 # Start SSH and Minikube on container start
-CMD ["/bin/bash", "-c", "service ssh start && dockerd & tail -f /dev/null"]
+CMD ["/usr/local/bin/start-jumphost"]

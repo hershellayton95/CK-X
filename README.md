@@ -12,6 +12,7 @@ A powerful Kubernetes certification practice environment that provides a realist
 - Comprehensive practice labs for **CKAD, CKA, CKS**, and other Kubernetes certifications
 - **Smart evaluation system** with real-time solution verification
 - **Docker-based deployment** for easy setup and consistent environment
+- **Multisession mode** for 2–5 concurrent candidates, each with an isolated cluster, desktop, and terminal
 - **Timed exam mode** with real exam-like conditions and countdown timer 
 
 
@@ -35,6 +36,22 @@ irm  https://raw.githubusercontent.com/sailor-sh/CK-X/master/scripts/install.ps1
 
 ### Manual Installation
 For detailed installation instructions, please refer to our [Deployment Guide](scripts/COMPOSE-DEPLOY.md).
+
+### Multisession Mode
+
+By default the stack runs one lab environment. To run 2–5 candidates
+concurrently, each with an isolated Kubernetes cluster, desktop, and terminal:
+
+```bash
+cp .env.example .env
+# set stable SESSION_SECRET and INTERNAL_TOKEN (openssl rand -hex 32)
+MULTISESSION_ENABLED=true docker compose up -d --build
+```
+
+Every browser gets a signed session cookie and its own data plane. Set
+`MAX_SESSIONS` to fit the host (budget ~5 GB RAM and 2.5 CPU per session), and
+see [docs/multisession.md](docs/multisession.md) for capacity, operations,
+troubleshooting, and rollback.
 
 ## Community & Support
 

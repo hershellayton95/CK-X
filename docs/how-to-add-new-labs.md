@@ -15,9 +15,25 @@ Each lab in CK-X Simulator consists of:
 # Considerations Before Creating a Lab
 1. The cluster will consist of one control-plane node and multiple worker nodes.
 2. SSH access to the nodes is not provided, which may restrict the development of labs that require access to Kubernetes internals or node internals.
-3. All setup scripts will be executed simultaneously, so ensure that the questions are independent of each other.
+3. Setup scripts run sequentially in filename order (only `q*_setup.sh`), so questions should still be independent of each other.
 4. Limit the setup to a maximum of two worker nodes to reduce system resource consumption during the exam.
 5. When creating files in the cluster, use the /tmp/exam directory. This directory will be created during setup and removed during cleanup.
+
+### Multisession compatibility
+
+Labs must work when 2–5 candidates run concurrently, each with a complete data
+plane (own cluster, jumphost, desktop, terminal):
+
+- Use in-cluster resources and internal service names. Do not assume a global
+  cluster identity or that you are the only lab running.
+- Only nginx is published, at `http://localhost:30080`. Never hardcode
+  `localhost:30080` or any host port inside setup/validation scripts; the
+  address belongs to the deployment, not the lab. Use `kubectl` and cluster
+  service names instead.
+- Do not rely on state from another lab or session. Use one namespace per
+  question and keep scratch files under `/tmp/exam`.
+- Per-session volumes/containers are destroyed with the session; do not depend
+  on anything outside the session's own cluster or `/tmp/exam` surviving.
 
 
 ## Step 1: Create Lab Directory Structure
@@ -70,7 +86,7 @@ Parameters:
 - `lab`: Unique identifier for the lab (should match directory structure)
 - `workerNodes`: Number of worker nodes required for this lab
 - `answers`: Path to answers markdown file
-- `questions`: sessment JSON filename
+- `questions`: Assessment JSON filename
 - `totalMarks`: Maximum possible score
 - `lowScore`, `mediumScore`, `highScore`: Score thresholds for result categorization
 

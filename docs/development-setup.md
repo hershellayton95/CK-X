@@ -25,14 +25,14 @@ cd ck-x-simulator
 
 ### 2. Configure the Environment
 
-Review the `compose.yaml` file to understand the service configuration. Key services include:
+Review the `docker-compose.yaml` file to understand the service configuration. Key services include:
 
 - **remote-desktop**: VNC server (Ubuntu 24.04 + XFCE, served over noVNC)
 - **webapp**: Web Application frontend
 - **nginx**: Reverse proxy (only service exposed to users)
 - **jumphost**: SSH access host
 - **remote-terminal**: Remote terminal service
-- **k8s-api-server**: KIND Kubernetes cluster
+- **k8s-api-server**: k3d/k3s cluster host (container name `kind-cluster` for compatibility)
 - **redis**: Redis database for Facilitator
 - **facilitator**: Backend service
 
@@ -40,10 +40,11 @@ Review the `compose.yaml` file to understand the service configuration. Key serv
 
 ```bash
 # Build and start all services
-docker-compose up --build
+docker compose up -d --build
 ```
 
-This command will build and start all the services defined in the compose.yaml file.
+This command builds and starts all services defined in `docker-compose.yaml`.
+Images are tagged `ckx/<service>:${SESSION_IMAGE_TAG:-dev}`.
 
 ## Accessing the Application
 
@@ -60,8 +61,9 @@ http://localhost:30080
 The VNC server is not directly exposed outside the container network. To access it:
 
 1. The web interface proxies VNC connections through Nginx
-2. Default VNC password: `bakku-the-wizard` (configured in compose.yaml)
-3. VNC resolution: 1280x800
+2. Single-environment default VNC password: `bakku-the-wizard` (configured in `docker-compose.yaml`)
+3. Multisession: each session gets a random VNC password, returned only to its browser via `/api/session-info`
+4. VNC resolution: 1280x800
 
 ### 3. SSH Access
 
@@ -69,7 +71,7 @@ SSH access is provided through the jumphost service:
 
 - **Hostname**: ckad9999
 - **Username**: candidate
-- **Password**: password (configured in compose.yaml)
+- **Password**: `password` in single-environment mode; random per session in multisession mode (never sent to the browser)
 
 The SSH service is not directly exposed outside the container network and is accessed through the webapp.
 
@@ -78,9 +80,9 @@ The SSH service is not directly exposed outside the container network and is acc
 ### 1. Remote Desktop (VNC)
 
 ```yaml
-# From compose.yaml
+# From docker-compose.yaml
 remote-desktop:
-  image: nishanb/ck-x-simulator-remote-desktop:latest
+  image: ckx/ck-x-remote-desktop:${SESSION_IMAGE_TAG:-dev}
   hostname: terminal
   expose:
     - "5901"  # VNC port (internal only)
@@ -97,9 +99,9 @@ The remote desktop provides a graphical interface for the exam environment.
 ### 2. Web Application
 
 ```yaml
-# From compose.yaml
+# From docker-compose.yaml
 webapp:
-  image: nishanb/ck-x-simulator-webapp:latest
+  image: ckx/ck-x-webapp:${SESSION_IMAGE_TAG:-dev}
   expose:
     - "3000"  # Only exposed to internal network
   environment:
@@ -117,9 +119,9 @@ The web application serves as the frontend interface for the simulator.
 ### 3. Nginx (Reverse Proxy)
 
 ```yaml
-# From compose.yaml
+# From docker-compose.yaml
 nginx:
-  image: nishanb/ck-x-simulator-nginx:latest
+  image: ckx/ck-x-nginx:${SESSION_IMAGE_TAG:-dev}
   ports:
     - "30080:80"  # Expose Nginx on port 30080
 ```
@@ -129,32 +131,33 @@ Nginx is the only service directly exposed to users and handles routing to inter
 ### 4. Kubernetes Cluster
 
 ```yaml
-# From compose.yaml
+# From docker-compose.yaml
 k8s-api-server:
-  image: nishanb/ck-x-simulator-cluster:latest
+  image: ckx/ck-x-k8s-api-server:${SESSION_IMAGE_TAG:-dev}
   container_name: kind-cluster
   hostname: k8s-api-server
-  privileged: true  # Required for running containers inside KIND
+  privileged: true  # Required for running k3d/k3s inside the container
   expose:
-    - "6443:6443" 
+    - "6443"
     - "22"
   volumes:
     - kube-config:/home/candidate/.kube  # Shared volume for Kubernetes config
 ```
 
-The Kubernetes cluster runs in a KIND container with shared kube-config volume.
+The Kubernetes cluster runs in a k3d/k3s container (container name `kind-cluster`
+for compatibility) with a shared kube-config volume.
 
 ### 5. Facilitator Service
 
 ```yaml
-# From compose.yaml
+# From docker-compose.yaml
 facilitator:
-  image: nishanb/ck-x-simulator-facilitator:latest
+  image: ckx/ck-x-facilitator:${SESSION_IMAGE_TAG:-dev}
   hostname: facilitator
   expose:
-    - "3000"
-  ports:
-    - "3001:3000"
+    - "3000"          # internal only; nginx proxies /facilitator/api/
+  volumes:
+    - /var/run/docker.sock:/var/run/docker.sock   # per-session stacks
   environment:
     - PORT=3000
     - NODE_ENV=prod
@@ -164,9 +167,15 @@ facilitator:
     - LOG_LEVEL=info
     - REDIS_HOST=redis
     - REDIS_PORT=6379
+    - MULTISESSION_ENABLED=${MULTISESSION_ENABLED:-false}
+    - MAX_SESSIONS=${MAX_SESSIONS:-3}
+    - SESSION_SECRET=${SESSION_SECRET:-}
+    - INTERNAL_TOKEN=${INTERNAL_TOKEN:-}
 ```
 
-The facilitator service handles backend operations and communicates with the Kubernetes cluster.
+The facilitator handles backend operations and, when multisession is enabled,
+spawns one Docker Compose stack per session. With `NODE_ENV=prod` it refuses to
+start if `SESSION_SECRET` or `INTERNAL_TOKEN` is missing or too short.
 
 ## Development Workflow
 
@@ -177,33 +186,75 @@ To modify a service, edit its corresponding directory and then rebuild:
 ```bash
 # Edit files in the respective service directory
 # Then rebuild and restart the service
-docker-compose up --build <service-name>
+docker compose up --build <service-name>
 ```
 
 ### 2. Inspecting Logs
 
 ```bash
 # View logs for all services
-docker-compose logs
+docker compose logs
 
 # View logs for a specific service
-docker-compose logs <service-name>
+docker compose logs <service-name>
 
 # Follow logs
-docker-compose logs -f <service-name>
+docker compose logs -f <service-name>
 ```
 
 ### 3. Accessing Containers
 
 ```bash
 # Get shell access to a container
-docker-compose exec <service-name> bash
+docker compose exec <service-name> bash
 
 # Examples:
-docker-compose exec webapp bash
-docker-compose exec facilitator bash
-docker-compose exec k8s-api-server bash
+docker compose exec webapp bash
+docker compose exec facilitator bash
+docker compose exec k8s-api-server bash
 ```
+
+## Multisession Development
+
+Prerequisites: Docker CLI + compose plugin available to the facilitator, the host
+Docker socket, and images built with the root compose.
+
+```bash
+cp .env.example .env
+# set MULTISESSION_ENABLED=true, SESSION_SECRET (>= 32 chars),
+# INTERNAL_TOKEN (>= 16 chars); ADMIN_TOKEN is optional
+
+docker compose up -d --build
+docker compose logs -f facilitator
+```
+
+Inspect live sessions and in-process metrics:
+
+```bash
+curl -H "X-Admin-Token: $ADMIN_TOKEN" \
+  http://localhost:30080/facilitator/api/v1/sessions
+```
+
+Inspect per-session resources:
+
+```bash
+docker ps -a --filter label=ckx.managed=true \
+  --format '{{.Names}}\t{{.Label "ckx.session"}}\t{{.Status}}'
+docker network ls --filter label=ckx.managed=true
+docker volume ls --filter label=ckx.managed=true
+```
+
+Notes:
+
+- The root compose sets `NODE_ENV=prod`, so the facilitator exits at startup if
+  `SESSION_SECRET`/`INTERNAL_TOKEN` are missing or too short.
+- A local `npm run dev` facilitator needs Redis, Docker socket access, the k3d
+  images, and `SESSION_COMPOSE_FILE` (or the repo-relative
+  `docker-compose.session.yaml`).
+- Only nginx is published (`:30080`). Session desktops/terminals are reachable
+  only through the webapp/nginx.
+- Defaults: 30 min idle, 8 h hard TTL, 60 s sweep. Use short values for reaper
+  testing; the exam page heartbeats every 5 min.
 
 ## Troubleshooting
 
@@ -212,32 +263,32 @@ docker-compose exec k8s-api-server bash
 If containers fail to start, check the logs:
 
 ```bash
-docker-compose logs <service-name>
+docker compose logs <service-name>
 ```
 
 ### 2. VNC Connection Issues
 
 ```bash
 # Check if VNC server is running
-docker-compose exec remote-desktop ps aux | grep vnc
+docker compose exec remote-desktop ps aux | grep vnc
 
 # Restart VNC service
-docker-compose restart remote-desktop
+docker compose restart remote-desktop
 ```
 
 ### 3. Kubernetes Cluster Issues
 
 ```bash
 # Check cluster status
-docker-compose exec k8s-api-server kubectl cluster-info
+docker compose exec k8s-api-server kubectl cluster-info
 
 # Restart the cluster
-docker-compose restart k8s-api-server
+docker compose restart k8s-api-server
 ```
 
 ### 4. Resource Constraints
 
-If your system cannot handle the resource requirements, adjust the limits in compose.yaml:
+If your system cannot handle the resource requirements, adjust the limits in `docker-compose.yaml` (control plane) and `facilitator/docker-compose.session.yaml` (per-session data plane):
 
 ```yaml
 deploy:
@@ -249,7 +300,7 @@ deploy:
 
 ## Network Architecture
 
-All services are connected through the `ckx-network` bridge network:
+Control-plane services are connected through the `ckx-network` bridge network:
 
 ```yaml
 networks:
@@ -258,21 +309,32 @@ networks:
     driver: bridge
 ```
 
-Services can communicate with each other using their service names as hostnames.
+Multisession adds two network layers:
+
+- `ckx-sessions` (shared): `webapp` and every session's `remote-desktop` /
+  `remote-terminal`, so the webapp proxies each browser to the right container.
+- `ckx-<session-id>-net` (per session): `k8s-api-server`, `jumphost`, and the
+  facilitator (attached at runtime so setup/grading can reach the jumphost).
+
+Services inside one session talk to each other by service name
+(`k8s-api-server`, `jumphost`, `remote-desktop`, `remote-terminal`). Those names
+are not global: each session has its own copies.
 
 ## Volume Management
 
-The system uses persistent volumes for:
-
 ```yaml
 volumes:
-  kube-config:  # Shared volume for Kubernetes configuration
-  redis-data:   # Persistent volume for Redis data
+  kube-config:  # Shared kubeconfig for the single-environment stack
 ```
+
+Redis persistence uses its AOF file inside the `redis` container; there is no
+named Redis volume. Multisession adds one kubeconfig volume per session,
+`ckx-<session-id>-kube`, removed with the session stack.
 
 ## Reference Links
 
 - [Docker Compose Documentation](https://docs.docker.com/compose/)
 - [Kubernetes Documentation](https://kubernetes.io/docs/)
-- [KIND Documentation](https://kind.sigs.k8s.io/)
+- [k3d Documentation](https://k3d.io/)
+- [Multisession operations](multisession.md)
 - [VNC Documentation](https://www.realvnc.com/en/connect/docs/) 

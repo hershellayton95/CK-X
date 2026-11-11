@@ -1,0 +1,159 @@
+# Per-session data plane.
+#
+# Spawned by facilitator/src/services/environment/dockerComposeProvider.js as:
+#   docker compose -p ckx-<session-id> -f docker-compose.session.yaml up -d --wait
+#
+# The images are built by the root docker-compose.yaml (SESSION_IMAGE_TAG).
+# Each session gets its own network and kubeconfig volume, so the in-stack
+# hostnames (k8s-api-server, jumphost, remote-desktop, remote-terminal) stay
+# identical to the single-environment layout.
+
+x-ckx-labels: &ckx-labels
+  ckx.managed: "true"
+  ckx.session: "${SESSION_ID}"
+
+services:
+  # k3d/k3s cluster host
+  k8s-api-server:
+    image: ckx/ck-x-k8s-api-server:${SESSION_IMAGE_TAG:-dev}
+    container_name: ckx-${SESSION_ID}-k8s-api-server
+    hostname: k8s-api-server
+    privileged: true # Required for running containers inside the cluster host
+    expose:
+      - "6443"
+      - "22"
+    environment:
+      - CLUSTER_NAME=${SESSION_CLUSTER_NAME}
+    volumes:
+      - kube-config:/home/candidate/.kube
+    labels: *ckx-labels
+    networks:
+      - session
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 4G
+        reservations:
+          cpus: "1"
+          memory: 2G
+    healthcheck:
+      test: ["CMD", "ls", "/ready"]
+      interval: 30s
+      timeout: 5s
+      retries: 20
+      start_period: 60s
+
+  # SSH target used by the facilitator for setup, grading and cleanup
+  jumphost:
+    image: ckx/ck-x-jumphost:${SESSION_IMAGE_TAG:-dev}
+    container_name: ckx-${SESSION_ID}-jumphost
+    hostname: ckad9999
+    privileged: true
+    expose:
+      - "22"
+    environment:
+      - CLUSTER_NAME=${SESSION_CLUSTER_NAME}
+      - FACILITATOR_URL=${FACILITATOR_URL:-http://facilitator:3000}
+      - INTERNAL_TOKEN=${INTERNAL_TOKEN:-}
+    volumes:
+      - kube-config:/home/candidate/.kube
+    labels: *ckx-labels
+    networks:
+      - session
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+        reservations:
+          cpus: "0.5"
+          memory: 512M
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "22"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # Per-session VNC desktop. Only the webapp talks to it, over the shared
+  # control network, so no per-session network attachment is needed.
+  remote-desktop:
+    image: ckx/ck-x-remote-desktop:${SESSION_IMAGE_TAG:-dev}
+    container_name: ckx-${SESSION_ID}-remote-desktop
+    hostname: terminal
+    shm_size: 512m # Electron and Firefox share memory through /dev/shm
+    expose:
+      - "5901"
+      - "6901"
+      - "5000"
+    environment:
+      - VNC_PW=${VNC_PASSWORD:-vncpassword}
+      - VNC_PASSWORD=${VNC_PASSWORD:-vncpassword}
+      - VNC_VIEW_ONLY=false
+      - VNC_RESOLUTION=1280x800
+    labels: *ckx-labels
+    networks:
+      - sessions
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 2G
+        reservations:
+          cpus: "0.5"
+          memory: 512M
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6901/"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # SSH target used by the browser terminal. Shared control network only, with
+  # a per-session password so sessions cannot log into each other.
+  remote-terminal:
+    image: ckx/ck-x-remote-terminal:${SESSION_IMAGE_TAG:-dev}
+    container_name: ckx-${SESSION_ID}-remote-terminal
+    hostname: remote-terminal
+    expose:
+      - "22"
+    environment:
+      - REMOTE_TERMINAL_PASSWORD=${TERMINAL_PASSWORD:-}
+    labels: *ckx-labels
+    networks:
+      - sessions
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+        reservations:
+          cpus: "0.2"
+          memory: 256M
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "22"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+networks:
+  # Per-session network for the cluster host, the exam jumphost and their
+  # kubeconfig volume. Removed with the stack.
+  session:
+    name: ckx-${SESSION_ID}-net
+    driver: bridge
+    labels:
+      ckx.managed: "true"
+      ckx.session: "${SESSION_ID}"
+
+  # Shared control network (created by the root compose / the facilitator). The
+  # webapp reaches every session's desktop and terminal through it, so no
+  # container has to join another session's network at runtime.
+  sessions:
+    external: true
+    name: ${SESSION_CONTROL_NETWORK:-ckx-sessions}
+
+volumes:
+  kube-config:
+    name: ckx-${SESSION_ID}-kube
+    labels:
+      ckx.managed: "true"
+      ckx.session: "${SESSION_ID}"

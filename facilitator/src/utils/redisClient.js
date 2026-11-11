@@ -15,6 +15,10 @@ const KEYS = {
   EXAM_MCQ_ANSWERS: 'exam:mcq-answers:', // For storing multiple-choice answers (so re-evaluation works)
 };
 
+// Exam data must outlive the longest lab (120 min) plus evaluation/review time.
+// Redis `setEx` takes seconds, so this is exposed in seconds (default 8 hours).
+const EXAM_DATA_TTL = parseInt(process.env.EXAM_DATA_TTL_SECONDS || '28800', 10);
+
 // Create Redis client using environment variables
 const redisClient = createClient({
   url: `redis://${process.env.REDIS_HOST || 'localhost'}:${process.env.REDIS_PORT || 6379}`
@@ -53,10 +57,10 @@ async function getClient() {
  * Persist exam information (JSON)
  * @param {string} examId - Exam identifier
  * @param {Object} examInfo - JSON object containing exam information
- * @param {number} [ttl=3600] - Time to live in seconds (default: 1 hour)
+ * @param {number} [ttl] - Time to live in seconds (default: EXAM_DATA_TTL, 8 hours)
  * @returns {Promise<string>} - Returns 'OK' if successful
  */
-async function persistExamInfo(examId, examInfo, ttl = 3600000) {
+async function persistExamInfo(examId, examInfo, ttl = EXAM_DATA_TTL) {
   try {
     const client = await getClient();
     const key = `${KEYS.EXAM_INFO}${examId}`;
@@ -74,10 +78,10 @@ async function persistExamInfo(examId, examInfo, ttl = 3600000) {
  * Persist exam status (string)
  * @param {string} examId - Exam identifier
  * @param {string} status - Exam status string
- * @param {number} [ttl=3600] - Time to live in seconds (default: 1 hour)
+ * @param {number} [ttl] - Time to live in seconds (default: EXAM_DATA_TTL, 8 hours)
  * @returns {Promise<string>} - Returns 'OK' if successful
  */
-async function persistExamStatus(examId, status, ttl = 3600000) {
+async function persistExamStatus(examId, status, ttl = EXAM_DATA_TTL) {
   try {
     const client = await getClient();
     const key = `${KEYS.EXAM_STATUS}${examId}`;
@@ -94,10 +98,10 @@ async function persistExamStatus(examId, status, ttl = 3600000) {
  * Persist exam evaluation result
  * @param {string} examId - Exam identifier
  * @param {Object} result - Exam evaluation result object
- * @param {number} [ttl=3600] - Time to live in seconds (default: 1 hour)
+ * @param {number} [ttl] - Time to live in seconds (default: EXAM_DATA_TTL, 8 hours)
  * @returns {Promise<string>} - Returns 'OK' if successful
  */
-async function persistExamResult(examId, result, ttl = 3600000) {
+async function persistExamResult(examId, result, ttl = EXAM_DATA_TTL) {
   try {
     const client = await getClient();
     const key = `${KEYS.EXAM_RESULT}${examId}`;
@@ -117,10 +121,10 @@ async function persistExamResult(examId, result, ttl = 3600000) {
  * Stored so that re-evaluation (which posts no body) can still grade MCQ questions
  * @param {string} examId - Exam identifier
  * @param {Object} answers - Map of question ID to selected option (e.g. { "1": "B" })
- * @param {number} [ttl=3600000] - Time to live in seconds
+ * @param {number} [ttl] - Time to live in seconds (default: EXAM_DATA_TTL, 8 hours)
  * @returns {Promise<string>} - Returns 'OK' if successful
  */
-async function persistMcqAnswers(examId, answers, ttl = 3600000) {
+async function persistMcqAnswers(examId, answers, ttl = EXAM_DATA_TTL) {
   try {
     const client = await getClient();
     const key = `${KEYS.EXAM_MCQ_ANSWERS}${examId}`;
@@ -153,10 +157,10 @@ async function getMcqAnswers(examId) {
 /**
  * Set the current exam ID
  * @param {string} examId - Exam identifier
- * @param {number} [ttl=3600] - Time to live in seconds (default: 1 hour)
+ * @param {number} [ttl] - Time to live in seconds (default: EXAM_DATA_TTL, 8 hours)
  * @returns {Promise<string>} - Returns 'OK' if successful
  */
-async function setCurrentExamId(examId, ttl = 3600000) {
+async function setCurrentExamId(examId, ttl = EXAM_DATA_TTL) {
   try {
     const client = await getClient();
     const result = await client.setEx(KEYS.CURRENT_EXAM_ID, ttl, examId);
@@ -236,7 +240,7 @@ async function getCurrentExamId() {
  * Update exam information
  * @param {string} examId - Exam identifier
  * @param {Object} examInfo - Updated exam information
- * @param {number} [ttl=3600] - Time to live in seconds (default: 1 hour)
+ * @param {number} [ttl] - Time to live in seconds (default: EXAM_DATA_TTL, 8 hours)
  * @returns {Promise<string>} - Returns 'OK' if successful
  */
 async function updateExamInfo(examId, examInfo) {
@@ -247,7 +251,7 @@ async function updateExamInfo(examId, examInfo) {
  * Update exam status
  * @param {string} examId - Exam identifier
  * @param {string} status - Updated exam status
- * @param {number} [ttl=3600] - Time to live in seconds (default: 1 hour)
+ * @param {number} [ttl] - Time to live in seconds (default: EXAM_DATA_TTL, 8 hours)
  * @returns {Promise<string>} - Returns 'OK' if successful
  */
 async function updateExamStatus(examId, status) {
@@ -257,7 +261,7 @@ async function updateExamStatus(examId, status) {
 /**
  * Update the current exam ID
  * @param {string} examId - Updated exam identifier
- * @param {number} [ttl=3600] - Time to live in seconds (default: 1 hour)
+ * @param {number} [ttl] - Time to live in seconds (default: EXAM_DATA_TTL, 8 hours)
  * @returns {Promise<string>} - Returns 'OK' if successful
  */
 async function updateCurrentExamId(examId) {
@@ -347,7 +351,8 @@ async function deleteAllExamData(examId) {
     const keys = [
       `${KEYS.EXAM_INFO}${examId}`,
       `${KEYS.EXAM_STATUS}${examId}`,
-      `${KEYS.EXAM_RESULT}${examId}`
+      `${KEYS.EXAM_RESULT}${examId}`,
+      `${KEYS.EXAM_MCQ_ANSWERS}${examId}`
     ];
     const result = await client.del(keys);
     logger.debug(`Deleted all data for exam ${examId}`);

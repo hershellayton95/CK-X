@@ -2,7 +2,7 @@
  * Remote Desktop Service
  * Handles remote desktop connection and management
  */
-import { getVncInfo } from './exam-api.js';
+import { getSessionInfo } from './exam-api.js';
 
 // Connect to VNC
 function connectToRemoteDesktop(vncFrame, statusCallback) {
@@ -10,8 +10,8 @@ function connectToRemoteDesktop(vncFrame, statusCallback) {
         statusCallback('Connecting to Remote Desktop...', 'info');
     }
     
-    // Get VNC server info from API
-    return getVncInfo()
+    // Get this session's desktop info from the webapp (session cookie based)
+    return getSessionInfo()
         .then(data => {
             console.log('Remote Desktop info:', data);
             

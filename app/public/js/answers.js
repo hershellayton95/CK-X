@@ -67,6 +67,9 @@ document.addEventListener('DOMContentLoaded', function() {
         fetch(`/facilitator/api/v1/exams/${examId}/answers`)
             .then(response => {
                 if (!response.ok) {
+                    if (response.status === 401 || response.status === 403) {
+                        throw new Error('This exam belongs to another session, or your session has expired.');
+                    }
                     throw new Error(`HTTP error! Status: ${response.status}`);
                 }
                 return response.text(); // Get raw text (Markdown content)

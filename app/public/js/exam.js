@@ -48,12 +48,49 @@ document.addEventListener('DOMContentLoaded', function() {
     let isCompletedExamMode = false;
     let isPlayground = false; // Question-free sandbox session (labType === 'playground')
     let playgroundEnded = false; // Guards the 0:00 hard-stop from double-firing
+    let sessionHeartbeat = null; // Keeps the facilitator session out of the idle reaper
+
+    // Keep the caller's session alive while a lab tab is open. A candidate can
+    // spend a long time typing in the desktop/terminal without making any other
+    // API call, so a low-frequency touch is required for idle expiry.
+    function startSessionHeartbeat() {
+        if (sessionHeartbeat) return;
+
+        const intervalMs = 5 * 60 * 1000;
+        sessionHeartbeat = setInterval(() => {
+            ExamApi.fetchCurrentExamInfo()
+                .then(() => {})
+                .catch(error => {
+                    if (error && [401, 403, 404].includes(error.status) && sessionHeartbeat) {
+                        clearInterval(sessionHeartbeat);
+                        sessionHeartbeat = null;
+                    }
+                });
+        }, intervalMs);
+
+        if (typeof sessionHeartbeat.unref === 'function') sessionHeartbeat.unref();
+    }
+
+    // A 401/403/404 from the exam API means this browser's session does not own
+    // the exam (foreign link or expired session). Send the candidate home
+    // instead of looping through generic errors.
+    function handleExamAccessError(error) {
+        if (!error || ![401, 403, 404].includes(error.status)) return false;
+
+        const message = error.status === 404
+            ? 'This exam is no longer available (the session may have ended).'
+            : 'This exam belongs to another session, or your session has expired.';
+        alert(`${message} Returning to the dashboard.`);
+        window.location.href = '/';
+        return true;
+    }
     
     // Add event listener for page unload to clean up resources
     window.addEventListener('beforeunload', cleanupResources);
     
     // Initialize by fetching questions
     fetchExamQuestions();
+    startSessionHeartbeat();
     
     // Listen for examCompletedSession event and handle connecting to a finished exam session
     document.addEventListener('examCompletedSession', function(event) {
@@ -141,6 +178,7 @@ document.addEventListener('DOMContentLoaded', function() {
             })
             .catch(error => {
                 console.error('Error loading exam environment:', error);
+                if (handleExamAccessError(error)) return;
                 alert('Failed to connect to exam environment. Please try again.');
                 pageLoader.style.display = 'none';
             });
@@ -183,6 +221,7 @@ document.addEventListener('DOMContentLoaded', function() {
             })
             .catch(error => {
                 console.error('Error loading exam environment:', error);
+                if (handleExamAccessError(error)) return;
                 alert('Failed to connect to exam environment. Please try again.');
                 pageLoader.style.display = 'none';
             });
@@ -267,6 +306,7 @@ document.addEventListener('DOMContentLoaded', function() {
             .catch(error => {
                         console.error('Error loading exam:', error);
                 // Show an error message to the user
+                        if (handleExamAccessError(error)) return;
                         alert('Failed to load exam data. Please refresh the page or contact support.');
                 pageLoader.style.display = 'none';
                     });
@@ -274,6 +314,7 @@ document.addEventListener('DOMContentLoaded', function() {
             .catch(error => {
                 console.error('Error loading exam:', error);
                 // Show an error message to the user
+                if (handleExamAccessError(error)) return;
                 alert('Failed to load exam data. Please refresh the page or contact support.');
                 pageLoader.style.display = 'none';
             });
@@ -1046,6 +1087,12 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Function to clean up resources when page is unloaded
     function cleanupResources() {
+        // Stop the session heartbeat before leaving the page
+        if (sessionHeartbeat) {
+            clearInterval(sessionHeartbeat);
+            sessionHeartbeat = null;
+        }
+
         // Release wake lock
         WakeLockService.releaseWakeLock();
         

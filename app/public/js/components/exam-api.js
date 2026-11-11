@@ -19,12 +19,20 @@ function getExamId() {
     return examId;
 }
 
+// Build an Error that keeps the HTTP status so callers can distinguish
+// "another session owns this exam" (403) from "exam gone / no session" (404).
+function httpError(response) {
+    const error = new Error(`HTTP error! Status: ${response.status}`);
+    error.status = response.status;
+    return error;
+}
+
 // Function to check exam status
 function checkExamStatus(examId) {
     return fetch(`/facilitator/api/v1/exams/${examId}/status`)
         .then(response => {
             if (!response.ok) {
-                throw new Error(`HTTP error! Status: ${response.status}`);
+                throw httpError(response);
             }
             return response.json();
         })
@@ -40,7 +48,7 @@ function fetchExamData(examId) {
     return fetch(apiUrl)
         .then(response => {
             if (!response.ok) {
-                throw new Error(`HTTP error! Status: ${response.status}`);
+                throw httpError(response);
             }
             return response.json();
         })
@@ -58,7 +66,7 @@ function fetchCurrentExamInfo() {
     return fetch('/facilitator/api/v1/exams/current')
         .then(response => {
             if (!response.ok) {
-                throw new Error(`HTTP error! Status: ${response.status}`);
+                throw httpError(response);
             }
             return response.json();
         })
@@ -102,14 +110,29 @@ function terminateSession(examId) {
     });
 }
 
-// Function to get VNC info
-function getVncInfo() {
-    return fetch('/api/vnc-info')
-        .then(response => response.json())
+// Function to get session-aware connection info (desktop + terminal)
+function getSessionInfo() {
+    return fetch('/api/session-info')
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+            return response.json();
+        })
         .catch(error => {
-            console.error('Error fetching VNC info:', error);
+            console.error('Error fetching session info:', error);
             throw error;
         });
+}
+
+// Function to get VNC info (legacy alias)
+function getVncInfo() {
+    return getSessionInfo();
+}
+
+// Session info (desktop/terminal targets for this browser's signed session)
+function fetchSessionInfo() {
+    return getSessionInfo();
 }
 
 // Function to track exam events
@@ -164,6 +187,8 @@ export {
     evaluateExam,
     terminateSession,
     getVncInfo,
+    getSessionInfo,
+    fetchSessionInfo,
     trackExamEvent,
     submitFeedback
 }; 

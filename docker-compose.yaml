@@ -1,7 +1,7 @@
 services:
   # VNC Server (Ubuntu)
   remote-desktop:
-    image: nishanb/ck-x-simulator-remote-desktop:latest
+    image: ckx/ck-x-remote-desktop:${SESSION_IMAGE_TAG:-dev}
     build:
       context: ./remote-desktop
     hostname: terminal
@@ -32,7 +32,7 @@ services:
 
   # Web Application (not directly exposed to users)
   webapp:
-    image: nishanb/ck-x-simulator-webapp:latest
+    image: ckx/ck-x-webapp:${SESSION_IMAGE_TAG:-dev}
     build:
       context: ./app
     expose:
@@ -45,6 +45,9 @@ services:
       - SSH_PORT=22
       - SSH_USER=candidate
       - SSH_PASSWORD=password
+      # Multisession: resolve this browser's desktop/terminal from the
+      # facilitator by forwarding its session cookie.
+      - FACILITATOR_URL=${FACILITATOR_URL:-http://facilitator:3000}
     deploy:
       resources:
         limits:
@@ -60,10 +63,11 @@ services:
       retries: 3
     networks:
       - ckx-network
+      - ckx-sessions
 
   # Nginx Reverse Proxy - ONLY SERVICE EXPOSED TO USERS
   nginx:
-    image: nishanb/ck-x-simulator-nginx:latest
+    image: ckx/ck-x-nginx:${SESSION_IMAGE_TAG:-dev}
     build:
       context: ./nginx
     depends_on:
@@ -92,7 +96,7 @@ services:
 
   # Jump Host (ckad9999 and ckad9988)
   jumphost:
-    image: nishanb/ck-x-simulator-jumphost:latest
+    image: ckx/ck-x-jumphost:${SESSION_IMAGE_TAG:-dev}
     build:
       context: ./jumphost
     hostname: ckad9999
@@ -100,6 +104,10 @@ services:
     # No external port mappings - only accessible internally
     expose:
       - "22" # SSH port (internal only)
+    environment:
+      - CLUSTER_NAME=cluster
+      - FACILITATOR_URL=${FACILITATOR_URL:-http://facilitator:3000}
+      - INTERNAL_TOKEN=${INTERNAL_TOKEN:-}
     volumes:
       - kube-config:/home/candidate/.kube # Shared volume for Kubernetes config
     deploy:
@@ -119,7 +127,7 @@ services:
 
   # Remote Terminal Service
   remote-terminal:
-    image: nishanb/ck-x-simulator-remote-terminal:latest
+    image: ckx/ck-x-remote-terminal:${SESSION_IMAGE_TAG:-dev}
     build:
       context: ./remote-terminal
     hostname: remote-terminal
@@ -143,7 +151,7 @@ services:
 
   # KIND Kubernetes Cluster
   k8s-api-server: # Service name that will be used for DNS resolution
-    image: nishanb/ck-x-simulator-cluster:latest
+    image: ckx/ck-x-k8s-api-server:${SESSION_IMAGE_TAG:-dev}
     build:
       context: ./kind-cluster
     container_name: kind-cluster
@@ -197,11 +205,18 @@ services:
 
   # Facilitator Service
   facilitator:
-    image: nishanb/ck-x-simulator-facilitator:latest
+    image: ckx/ck-x-facilitator:${SESSION_IMAGE_TAG:-dev}
     build:
       context: ./facilitator
       dockerfile: Dockerfile
     hostname: facilitator
+    container_name: ckx-facilitator
+    # The facilitator talks to the host Docker daemon to provision per-session
+    # environments. Running as root is an MVP trade-off for socket permissions;
+    # M7 hardening replaces this with a restricted socket proxy.
+    user: "0:0"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
     expose:
       - "3000"
     environment:
@@ -214,6 +229,22 @@ services:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - TRACK_METRICS=true # based on the environment variable TRACK_METRICS, the facilitator will send metrics to the metric server
+      # Multisession (see docs/multisession.md). Flag defaults to false so the
+      # current single-environment flow is unchanged.
+      - MULTISESSION_ENABLED=${MULTISESSION_ENABLED:-false}
+      - MAX_SESSIONS=${MAX_SESSIONS:-3}
+      - SESSION_SECRET=${SESSION_SECRET:-}
+      - INTERNAL_TOKEN=${INTERNAL_TOKEN:-}
+      - FACILITATOR_URL=${FACILITATOR_URL:-http://facilitator:3000}
+      - SESSION_IMAGE_TAG=${SESSION_IMAGE_TAG:-dev}
+      - EXAM_DATA_TTL_SECONDS=${EXAM_DATA_TTL_SECONDS:-28800}
+      - SESSION_TTL_SECONDS=${SESSION_TTL_SECONDS:-28800}
+      - SESSION_IDLE_SECONDS=${SESSION_IDLE_SECONDS:-1800}
+      - SESSION_SWEEP_INTERVAL_SECONDS=${SESSION_SWEEP_INTERVAL_SECONDS:-60}
+      - SESSION_CONTROL_NETWORK=${SESSION_CONTROL_NETWORK:-ckx-sessions}
+      - ADMIN_TOKEN=${ADMIN_TOKEN:-}
+      - ENV_PROVIDER=${ENV_PROVIDER:-docker-compose}
+      - SELF_CONTAINER_NAME=ckx-facilitator
     restart: unless-stopped
     depends_on:
       - jumphost
@@ -237,6 +268,13 @@ services:
 networks:
   ckx-network:
     name: ckx-network
+    driver: bridge
+
+  # Shared control network: the webapp reaches every session's desktop and
+  # terminal here. Session stacks join it as an external network, so no
+  # container is attached to another session's network at runtime.
+  ckx-sessions:
+    name: ckx-sessions
     driver: bridge
 
 volumes:

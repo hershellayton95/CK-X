@@ -15,7 +15,7 @@ if ! command -v k3d &> /dev/null; then
     
     # Retry k3d installation up to 5 times
     INSTALL_ATTEMPTS=0
-    while [ $INSTALL_ATTEMPTS -lt 99999 ]; do
+    while [ $INSTALL_ATTEMPTS -lt 5 ]; do
         INSTALL_ATTEMPTS=$((INSTALL_ATTEMPTS+1))
         echo "$(date '+%Y-%m-%d %H:%M:%S') | Installation attempt $INSTALL_ATTEMPTS"
         
@@ -40,10 +40,23 @@ if ! command -v k3d &> /dev/null; then
 fi
 
 
-# Delete cluster config if exists
-if [ -f "k3d-config.yaml" ]; then  
-    echo "k3d-config.yaml already exists, deleting it"
-    rm -f k3d-config.yaml
+# Delete cluster config if exists (written to /tmp below, not the cwd)
+if [ -f "/tmp/k3d-config.yaml" ]; then
+    echo "/tmp/k3d-config.yaml already exists, deleting it"
+    rm -f /tmp/k3d-config.yaml
+fi
+
+# Nested k3d (Docker-in-Docker) needs the vxlan kernel module for flannel's
+# default backend. If the host kernel does not expose it (for example a kernel
+# upgraded without a reboot), fall back to host-gw, which only needs plain IP
+# routing between nodes on the same bridge.
+FLANNEL_ARGS=""
+if [ ! -d /sys/module/vxlan ]; then
+    modprobe vxlan 2>/dev/null || true
+    if [ ! -d /sys/module/vxlan ]; then
+        echo "$(date '+%Y-%m-%d %H:%M:%S') | vxlan kernel module unavailable; using flannel host-gw backend"
+        FLANNEL_ARGS=$(printf '      - arg: "--flannel-backend=host-gw"\n        nodeFilters:\n          - server:*')
+    fi
 fi
 
 # Generate K3d config
@@ -75,6 +88,7 @@ options:
       - arg: "--tls-san=localhost"
         nodeFilters:
           - server:*
+$FLANNEL_ARGS
 EOF
 
 echo "Cluster config with $NUM_WORKERS worker nodes generated: /tmp/k3d-config.yaml"
@@ -85,7 +99,10 @@ echo "$(date '+%Y-%m-%d %H:%M:%S') | ├── Config: /tmp/k3d-config.yaml"
 echo "$(date '+%Y-%m-%d %H:%M:%S') | └── Number of nodes: $((NUM_WORKERS + 1)) (1 server + $NUM_WORKERS agents)"
 
 # Create k3d cluster
-k3d cluster create --config /tmp/k3d-config.yaml
+if ! k3d cluster create --config /tmp/k3d-config.yaml; then
+    echo "$(date '+%Y-%m-%d %H:%M:%S') | [ERROR] k3d cluster create failed for '$CLUSTER_NAME'"
+    exit 1
+fi
 
 # ===============================================================================
 #   Cluster Readiness Check
@@ -93,10 +110,16 @@ k3d cluster create --config /tmp/k3d-config.yaml
 
 echo "$(date '+%Y-%m-%d %H:%M:%S') | Verifying cluster status..."
 CLUSTER_CHECK_COUNT=0
+CLUSTER_CHECK_MAX=120
 
-# Wait for k3d cluster to be ready
+# Wait for k3d cluster to be ready. Bounded so a failed start reports an error
+# instead of hanging the exam in PREPARING forever.
 while ! k3d cluster list | grep -q "$CLUSTER_NAME"; do
     CLUSTER_CHECK_COUNT=$((CLUSTER_CHECK_COUNT+1))
+    if [ "$CLUSTER_CHECK_COUNT" -ge "$CLUSTER_CHECK_MAX" ]; then
+        echo "$(date '+%Y-%m-%d %H:%M:%S') | [ERROR] K3d cluster '$CLUSTER_NAME' did not become ready after $CLUSTER_CHECK_MAX attempts"
+        exit 1
+    fi
     echo "$(date '+%Y-%m-%d %H:%M:%S') | [WAITING] K3d cluster '$CLUSTER_NAME' not ready yet... (attempt $CLUSTER_CHECK_COUNT)"
     sleep 5
 done

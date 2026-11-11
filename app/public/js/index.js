@@ -50,19 +50,35 @@ document.addEventListener('DOMContentLoaded', function() {
                         }
                     }
                     
-                    // If exam is in PREPARING state, show loading overlay and start polling
-                    if (data.status === 'PREPARING') {
-                        console.log('Exam is in PREPARING state, showing loading overlay');
+                    // Resume the candidate's own session after a refresh:
+                    // CREATED/PREPARING -> wait for it, READY -> go to the lab.
+                    if (data.status === 'CREATED' || data.status === 'PREPARING') {
+                        console.log('Active session is being prepared, resuming...');
                         showLoadingOverlay();
                         updateLoadingMessage('Preparing lab environment...');
                         updateExamInfo(data.info?.name || 'Unknown Exam');
-                        // Start polling for status
                         pollExamStatus(data.id).then(statusData => {
-                            if (statusData.status === 'READY') {
-                                // Redirect to exam page when ready
+                            if (statusData && statusData.status === 'READY') {
                                 window.location.href = `/exam.html?id=${data.id}`;
                             }
+                        }).catch(error => {
+                            console.error('Error resuming session:', error);
+                            hideLoadingOverlay();
+                            localStorage.removeItem('currentExamData');
+                            localStorage.removeItem('currentExamId');
+                            alert(error.message || 'Failed to resume the active lab session.');
                         });
+                    } else if (data.status === 'READY') {
+                        console.log('Resuming active session:', data.id);
+                        showLoadingOverlay();
+                        updateLoadingMessage('Resuming your active lab session...');
+                        updateExamInfo(data.info?.name || 'Unknown Exam');
+                        window.location.href = `/exam.html?id=${data.id}`;
+                    } else if (data.status === 'PREPARATION_FAILED' || data.status === 'CLEANUP_FAILED') {
+                        // A failed stack is not resumable; clear the stale pointer.
+                        console.log('Session ended in', data.status, '- clearing local state');
+                        localStorage.removeItem('currentExamData');
+                        localStorage.removeItem('currentExamId');
                     }
                 }
             })
@@ -117,7 +133,7 @@ document.addEventListener('DOMContentLoaded', function() {
             });
     });
     
-    // Function to show warning modal for active exam
+    // Function to show warning modal for an exam owned by this browser session
     function showActiveExamWarningModal(examData) {
         // Create modal HTML
         const modalHTML = `
@@ -125,19 +141,19 @@ document.addEventListener('DOMContentLoaded', function() {
                 <div class="modal-dialog modal-dialog-centered">
                     <div class="modal-content rounded">
                         <div class="modal-header bg-dark text-white rounded-top">
-                            <h5 class="modal-title text-white" id="activeExamWarningModalLabel">Active Exam Detected</h5>
+                            <h5 class="modal-title text-white" id="activeExamWarningModalLabel">Active Lab Session</h5>
                             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
                         <div class="modal-body">
                             <div class="alert alert-info">
-                                <p>You already have an active exam session:</p>
+                                <p>You already have an active lab session:</p>
                                 <p><strong>${examData.info?.name || 'Unknown Exam'}</strong></p>
-                                <p class="mb-0">Only one active exam session can be present at a time.</p>
+                                <p class="mb-0">Only one lab can run per candidate at a time. Resume it, or terminate it before starting a different lab.</p>
                             </div>
                         </div>
                         <div class="modal-footer rounded-bottom">
-                            <button type="button" class="btn btn-sm btn-primary" id="continueSessionBtn">CONTINUE CURRENT SESSION</button>
-                            <button type="button" class="btn btn-sm btn-danger" id="terminateAndProceedBtn">TERMINATE AND PROCEED</button>
+                            <button type="button" class="btn btn-sm btn-primary" id="continueSessionBtn">RESUME SESSION</button>
+                            <button type="button" class="btn btn-sm btn-danger" id="terminateAndProceedBtn">TERMINATE SESSION</button>
                         </div>
                     </div>
                 </div>
@@ -217,7 +233,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 // Reset button state
                 terminateBtn.disabled = false;
-                terminateBtn.innerHTML = 'Terminate and Proceed';
+                terminateBtn.innerHTML = 'Terminate Session';
                 
                 alert('Failed to terminate the active exam. Please try again later.');
             });
@@ -514,6 +530,22 @@ document.addEventListener('DOMContentLoaded', function() {
                 body: JSON.stringify(selectedLab)
             })
             .then(response => {
+                if (response.status === 429) {
+                    return response.json().then(body => {
+                        const error = new Error(body.message || 'All lab slots are currently in use.');
+                        error.status = 429;
+                        error.retryAfter = parseInt(response.headers.get('Retry-After') || '30', 10);
+                        throw error;
+                    });
+                }
+                if (response.status === 409) {
+                    return response.json().then(body => {
+                        const error = new Error(body.message || 'You already have an active lab.');
+                        error.status = 409;
+                        error.currentExamId = body.currentExamId;
+                        throw error;
+                    });
+                }
                 if (!response.ok) {
                     throw new Error('Failed to start lab. Status: ' + response.status);
                 }
@@ -538,7 +570,14 @@ document.addEventListener('DOMContentLoaded', function() {
             .catch(error => {
                 console.error('Error starting lab:', error);
                 hideLoadingOverlay();
-                alert('Failed to start the lab. Please try again later.');
+                if (error.status === 429) {
+                    alert(`${error.message} Please wait about ${error.retryAfter || 30} seconds and try again.`);
+                } else if (error.status === 409 && error.currentExamId) {
+                    // This session already owns a lab; resume it instead.
+                    window.location.href = `/exam.html?id=${error.currentExamId}`;
+                } else {
+                    alert('Failed to start the lab. Please try again later.');
+                }
             });
         }
     });
@@ -583,6 +622,12 @@ document.addEventListener('DOMContentLoaded', function() {
                         updateLoadingMessage('Lab environment is ready! Redirecting...');
                         // Wait a moment for the user to see the 100% progress
                         setTimeout(() => resolve(data), 1000);
+                        return;
+                    }
+
+                    if (data.status === 'PREPARATION_FAILED' || data.status === 'CLEANUP_FAILED' || data.status === 'EVALUATION_FAILED') {
+                        updateLoadingMessage(`Lab preparation failed (${data.status}).`);
+                        setTimeout(() => reject(new Error(data.message || `Lab preparation failed (${data.status})`)), 500);
                         return;
                     }
                     

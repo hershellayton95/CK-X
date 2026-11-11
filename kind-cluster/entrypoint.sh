@@ -22,9 +22,14 @@ fi
 echo "$(date '+%Y-%m-%d %H:%M:%S') | Checking Docker service status..."
 DOCKER_CHECK_COUNT=0
 
-# Wait for docker to be ready
+# Wait for docker to be ready (bounded so a broken dind fails the container
+# instead of leaving the session waiting forever)
 while ! docker ps; do   
     DOCKER_CHECK_COUNT=$((DOCKER_CHECK_COUNT+1))
+    if [ "$DOCKER_CHECK_COUNT" -ge 60 ]; then
+        echo "$(date '+%Y-%m-%d %H:%M:%S') | [ERROR] Docker did not start after 60 attempts"
+        exit 1
+    fi
     echo "$(date '+%Y-%m-%d %H:%M:%S') | [WAITING] Docker service not ready yet... (attempt $DOCKER_CHECK_COUNT)"
     sleep 5
 done

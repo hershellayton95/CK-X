@@ -6,10 +6,15 @@ const config = require('../config');
 /**
  * Execute a command on a remote SSH server
  * @param {string} command - The command to execute
+ * @param {Object} [options] - Per-call connection overrides (used by
+ *   per-session jumphosts)
+ * @param {string} [options.host]
+ * @param {number} [options.port]
+ * @param {string} [options.username]
  * @returns {Promise<Object>} The result of the command execution
  */
-async function executeCommand(command) {
-  logger.info(`Executing command: ${command}`);
+async function executeCommand(command, options = {}) {
+  logger.info(`Executing command: ${command}`, { host: options.host || config.ssh.host });
   
   return new Promise((resolve, reject) => {
     const conn = new Client();
@@ -53,9 +58,9 @@ async function executeCommand(command) {
     
     // Configure connection for jumphost which accepts passwordless authentication
     const connectionConfig = {
-      host: config.ssh.host,
-      port: config.ssh.port,
-      username: config.ssh.username,
+      host: options.host || config.ssh.host,
+      port: options.port || config.ssh.port,
+      username: options.username || config.ssh.username,
       // For passwordless authentication
       readyTimeout: 30000, // Increase timeout for slow connections
     };

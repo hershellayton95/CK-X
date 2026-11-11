@@ -1,6 +1,13 @@
 #!/bin/bash
 exec >> /proc/1/fd/1 2>&1
 
+# SSH sessions do not inherit the container environment. start-jumphost writes
+# the session's cluster name, facilitator URL and internal token to this file.
+if [ -f /etc/ckx-env ]; then
+  . /etc/ckx-env
+fi
+
+CLUSTER_NAME=${CLUSTER_NAME:-cluster}
 
 # Log function with timestamp
 log() {
@@ -40,10 +47,19 @@ if ! [[ "$NUMBER_OF_NODES" =~ ^[0-9]+$ ]]; then
 fi
 
 # Setup kind cluster
-ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null candidate@k8s-api-server "env-setup $NUMBER_OF_NODES $CLUSTER_NAME"
+if ! ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null candidate@k8s-api-server "env-setup $NUMBER_OF_NODES $CLUSTER_NAME"; then
+  log "ERROR: cluster setup failed for $CLUSTER_NAME"
+  exit 1
+fi
 
 #Pull assets from URL
-curl facilitator:3000/api/v1/exams/$EXAM_ID/assets -o assets.tar.gz
+# In multisession mode the assets endpoint requires a session cookie or the
+# shared internal token (the jumphost has no candidate session).
+FACILITATOR_URL=${FACILITATOR_URL:-http://facilitator:3000}
+if ! curl -fsS -H "X-Internal-Token: ${INTERNAL_TOKEN:-}" "$FACILITATOR_URL/api/v1/exams/$EXAM_ID/assets" -o assets.tar.gz; then
+  log "ERROR: failed to download exam assets from $FACILITATOR_URL"
+  exit 1
+fi
 
 mkdir -p /tmp/exam-assets
 #Unzip assets
@@ -61,9 +77,17 @@ export KUBECONFIG=/home/candidate/.kube/kubeconfig
 
 sleep 5
 
-#wait till api-server is ready
+#wait till api-server is ready (bounded so a broken cluster fails the exam
+# instead of leaving it in PREPARING forever)
+API_WAIT_COUNT=0
+API_WAIT_MAX=120
 while ! kubectl get nodes > /dev/null 2>&1; do
-  log "API server is not ready, retrying..."
+  API_WAIT_COUNT=$((API_WAIT_COUNT+1))
+  if [ "$API_WAIT_COUNT" -ge "$API_WAIT_MAX" ]; then
+    log "ERROR: API server did not become ready after $API_WAIT_MAX attempts"
+    exit 1
+  fi
+  log "API server is not ready, retrying... (attempt $API_WAIT_COUNT)"
   sleep 5
 done
 

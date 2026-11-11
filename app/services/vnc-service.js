@@ -1,37 +1,44 @@
 const { createProxyMiddleware } = require('http-proxy-middleware');
+const sessionResolver = require('./session-resolver');
 
+/**
+ * VNC proxy.
+ *
+ * In single-environment mode the target and password come from the container
+ * environment. With multisession enabled the target is resolved per request
+ * from the caller's signed session cookie (via the facilitator), so two
+ * browsers on the same webapp reach different desktops.
+ */
 class VNCService {
     constructor(config) {
-        this.config = {
-            host: config.host || 'remote-desktop-service',
-            port: config.port || 6901,
-            password: config.password || 'bakku-the-wizard'
+        this.fallback = {
+            vncHost: config.host || 'remote-desktop',
+            vncPort: config.port || 6901,
+            vncPassword: config.password || 'bakku-the-wizard'
         };
 
         this.vncProxyConfig = {
-            target: `http://${this.config.host}:${this.config.port}`,
+            target: `http://${this.fallback.vncHost}:${this.fallback.vncPort}`,
             changeOrigin: true,
             ws: true,
             secure: false,
             pathRewrite: {
                 '^/vnc-proxy': ''
             },
+            router: (req) => this.resolveTarget(req),
             onProxyReq: (proxyReq, req, res) => {
-                // Log HTTP requests being proxied
                 console.log(`Proxying HTTP request to VNC server: ${req.url}`);
             },
             onProxyReqWs: (proxyReq, req, socket, options, head) => {
-                // Log WebSocket connections
                 console.log(`WebSocket connection established to VNC server: ${req.url}`);
             },
             onProxyRes: (proxyRes, req, res) => {
-                // Log the responses from VNC server
                 console.log(`Received response from VNC server for: ${req.url}`);
             },
             onError: (err, req, res) => {
                 console.error(`Proxy error: ${err.message}`);
                 if (res && res.writeHead) {
-                    res.writeHead(500, {
+                    res.writeHead(502, {
                         'Content-Type': 'text/plain'
                     });
                     res.end(`Proxy error: ${err.message}`);
@@ -40,20 +47,22 @@ class VNCService {
         };
     }
 
-    setupVNCProxy(app) {
-        // Middleware to enhance VNC URLs with authentication if needed
-        app.use('/vnc-proxy', (req, res, next) => {
-            // Check if the URL already has a password parameter
-            if (!req.query.password) {
-                // If no password provided, add default password
-                console.log('Adding default VNC password to request');
-                const separator = req.url.includes('?') ? '&' : '?';
-                req.url = `${req.url}${separator}password=${this.config.password}`;
-            }
-            next();
-        }, createProxyMiddleware(this.vncProxyConfig));
+    /**
+     * Resolve the proxy target for one request (HTTP or WebSocket upgrade).
+     * http-proxy-middleware awaits async routers.
+     */
+    async resolveTarget(req) {
+        const targets = await sessionResolver.resolveTargets(req, this.fallback);
+        req._ckxTargets = targets;
+        console.log(`VNC proxy target: ${targets.vncHost}:${targets.vncPort} ` +
+            `(session ${targets.sessionId || 'single-environment'})`);
+        return `http://${targets.vncHost}:${targets.vncPort}`;
+    }
 
-        // Direct WebSocket proxy to handle the websockify endpoint
+    setupVNCProxy(app) {
+        app.use('/vnc-proxy', createProxyMiddleware(this.vncProxyConfig));
+
+        // Direct WebSocket proxy for the websockify endpoint
         app.use('/websockify', createProxyMiddleware({
             ...this.vncProxyConfig,
             pathRewrite: {
@@ -61,16 +70,14 @@ class VNCService {
             },
             ws: true,
             onProxyReqWs: (proxyReq, req, socket, options, head) => {
-                // Log WebSocket connections to websockify
                 console.log(`WebSocket connection to websockify established: ${req.url}`);
-                
-                // Add additional headers if needed
-                proxyReq.setHeader('Origin', `http://${this.config.host}:${this.config.port}`);
+                const targets = req._ckxTargets || this.fallback;
+                proxyReq.setHeader('Origin', `http://${targets.vncHost}:${targets.vncPort}`);
             },
             onError: (err, req, res) => {
                 console.error(`Websockify proxy error: ${err.message}`);
                 if (res && res.writeHead) {
-                    res.writeHead(500, {
+                    res.writeHead(502, {
                         'Content-Type': 'text/plain'
                     });
                     res.end(`Websockify proxy error: ${err.message}`);
@@ -79,15 +86,18 @@ class VNCService {
         }));
     }
 
-    getVNCInfo() {
+    async getVNCInfo(req) {
+        const targets = await sessionResolver.resolveTargets(req, this.fallback);
         return {
-            host: this.config.host,
-            port: this.config.port,
+            host: targets.vncHost,
+            port: targets.vncPort,
             wsUrl: `/websockify`,
-            defaultPassword: this.config.password,
+            defaultPassword: targets.vncPassword,
+            sessionId: targets.sessionId,
+            multisession: targets.multisession,
             status: 'connected'
         };
     }
 }
 
-module.exports = VNCService; 
+module.exports = VNCService;

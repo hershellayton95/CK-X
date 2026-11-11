@@ -9,27 +9,37 @@ const { v4: uuidv4 } = require('uuid');
 const logger = require('../utils/logger');
 const redisClient = require('../utils/redisClient');
 const jumphostService = require('./jumphostService');
+const environmentService = require('./environmentService');
 const MetricService = require('./metricService');
 
 /**
  * Create a new exam
  * @param {Object} examData - The exam data
+ * @param {Object} [options]
+ * @param {boolean} [options.multisession=false] - Skip the global
+ *   current-exam pointer and allow several exams to coexist
+ * @param {string} [options.sessionId] - Owning session; required for a
+ *   per-session data plane
  * @returns {Promise<Object>} Result object with success status and data
  */
-async function createExam(examData) {
+async function createExam(examData, options = {}) {
   try {
-    // Check if there's already an active exam
-    const currentExamId = await redisClient.getCurrentExamId();
-    
-    // If currentExamId exists, don't allow creating a new exam
-    if (currentExamId) {
-      logger.warn(`Attempted to create a new exam while exam ${currentExamId} is still active`);
-      return {
-        success: false,
-        error: 'Exam already exists',
-        message: 'Only one exam can be active at a time. End the current exam before creating a new one.',
-        currentExamId
-      };
+    const multisession = options.multisession === true;
+
+    // In single-environment mode there can be only one active exam at a time.
+    // With multisession each exam is owned by a session instead.
+    if (!multisession) {
+      const currentExamId = await redisClient.getCurrentExamId();
+
+      if (currentExamId) {
+        logger.warn(`Attempted to create a new exam while exam ${currentExamId} is still active`);
+        return {
+          success: false,
+          error: 'Exam already exists',
+          message: 'Only one exam can be active at a time. End the current exam before creating a new one.',
+          currentExamId
+        };
+      }
     }
     
     const examId = uuidv4();
@@ -47,8 +57,11 @@ async function createExam(examData) {
     // Set initial exam status
     await redisClient.persistExamStatus(examId, 'CREATED');
     
-    // Set as current exam ID
-    await redisClient.setCurrentExamId(examId);
+    // Only the legacy single-environment flow needs the global pointer; in
+    // multisession mode the owning session stores the exam ID instead.
+    if (!multisession) {
+      await redisClient.setCurrentExamId(examId);
+    }
     
     logger.info(`Exam created successfully with ID: ${examId}`);
     
@@ -63,7 +76,11 @@ async function createExam(examData) {
       
       // Set up the exam environment asynchronously
       // This will happen in the background while the response is sent back to the client
-      setupExamEnvironmentAsync(examId, nodeCount);
+      if (multisession && options.sessionId) {
+        setupSessionEnvironmentAsync(options.sessionId, examId, nodeCount);
+      } else {
+        setupExamEnvironmentAsync(examId, nodeCount);
+      }
     }
     
     // send metrics to metric server
@@ -137,16 +154,57 @@ async function setupExamEnvironmentAsync(examId, nodeCount) {
 }
 
 /**
+ * Provision a per-session data plane and prepare the exam on it.
+ * Runs in the background so the create-exam response is not blocked.
+ *
+ * @param {string} sessionId - Owning session
+ * @param {string} examId - The exam ID
+ * @param {number} nodeCount - Number of worker nodes
+ */
+async function setupSessionEnvironmentAsync(sessionId, examId, nodeCount) {
+  try {
+    const result = await environmentService.provisionForExam(sessionId, examId, nodeCount);
+
+    if (!result.success) {
+      logger.error(`Failed to set up per-session environment for exam ${examId}`, {
+        error: result.error,
+        details: result.details
+      });
+      return;
+    }
+
+    logger.info(`Per-session environment ready for exam ${examId}`);
+  } catch (error) {
+    logger.error(`Unexpected error provisioning environment for exam ${examId}`, {
+      error: error.message
+    });
+
+    try {
+      const currentStatus = await redisClient.getExamStatus(examId);
+      if (currentStatus !== 'PREPARATION_FAILED') {
+        await redisClient.persistExamStatus(examId, 'PREPARATION_FAILED');
+      }
+    } catch (statusError) {
+      logger.error(`Failed to update exam status for exam ${examId}`, {
+        error: statusError.message
+      });
+    }
+  }
+}
+
+/**
  * Get the current active exam
+ * @param {string} [examId] - Exam owned by the caller's session. When omitted
+ *   the legacy global pointer is used.
  * @returns {Promise<Object>} Result object with success status and data
  */
-async function getCurrentExam() {
+async function getCurrentExam(examId = null) {
   try {
-    // Get the current exam ID
-    const examId = await redisClient.getCurrentExamId();
+    // In multisession mode the controller passes the session's exam ID.
+    const targetExamId = examId || await redisClient.getCurrentExamId();
     
     // based on the path include 
-    if (!examId) {
+    if (!targetExamId) {
       logger.info('No current exam is set');
       return {
         success: false,
@@ -156,13 +214,13 @@ async function getCurrentExam() {
     }
     
     // Get exam information and status
-    const examInfo = await redisClient.getExamInfo(examId);
-    const examStatus = await redisClient.getExamStatus(examId);
+    const examInfo = await redisClient.getExamInfo(targetExamId);
+    const examStatus = await redisClient.getExamStatus(targetExamId);
     
     return {
       success: true,
       data: {
-        id: examId,
+        id: targetExamId,
         status: examStatus,
         info: examInfo
       }
@@ -324,9 +382,13 @@ async function getExamQuestions(examId) {
  * Evaluate an exam
  * @param {string} examId - The exam ID
  * @param {Object} evaluationData - The evaluation data
+ * @param {Object} [options]
+ * @param {Object} [options.session] - Owning session (per-session env)
  * @returns {Promise<Object>} Result object with success status and data
  */
-async function evaluateExam(examId, evaluationData) {
+async function evaluateExam(examId, evaluationData, options = {}) {
+  const env = options.session && options.session.env ? options.session.env : null;
+
   try {
     // Playground labs have no questions to grade: "evaluating" one just
     // tears the session down (defensive - the frontend never calls this)
@@ -336,7 +398,7 @@ async function evaluateExam(examId, evaluationData) {
     }
     if (examInfo.config && examInfo.config.labType === 'playground') {
       logger.info(`Playground lab ${examId} evaluated - ending session instead of grading`);
-      return await endExam(examId);
+      return await endExam(examId, options);
     }
 
     // Update exam status to EVALUATING
@@ -374,7 +436,7 @@ async function evaluateExam(examId, evaluationData) {
     Promise.resolve().then(async () => {
       try {
         // Call the jumphost service to perform the evaluation
-        await jumphostService.evaluateExamOnJumphost(examId, questions, mcqAnswers);
+        await jumphostService.evaluateExamOnJumphost(examId, questions, mcqAnswers, env);
       } catch (error) {
         logger.error(`Error in async exam evaluation for exam ${examId}`, { error: error.message });
         // Update exam status to EVALUATION_FAILED
@@ -434,23 +496,40 @@ async function getExamResult(examId) {
 /**
  * End an exam
  * @param {string} examId - The exam ID
+ * @param {Object} [options]
+ * @param {Object} [options.session] - Owning session; when it owns an
+ *   environment, the whole per-session stack is destroyed instead of running
+ *   the shared jumphost cleanup
  * @returns {Promise<Object>} Result object with success status and data
  */
-async function endExam(examId) {
+async function endExam(examId, options = {}) {
   try {
-    // Get current exam ID to verify this is the active exam
+    const session = options.session || null;
+    const perSession = !!session;
+
+    // In single-environment mode the exam must be the one pointed to by the
+    // global key. In multisession mode the ownership middleware already
+    // verified it, and the key is normally unset.
     const currentExamId = await redisClient.getCurrentExamId();
     
-    if (currentExamId !== examId) {
-      logger.warn(`Attempted to end exam ${examId} but current exam is ${currentExamId || 'not set'}`);
+    if (currentExamId && currentExamId !== examId) {
+      logger.warn(`Attempted to end exam ${examId} but current exam is ${currentExamId}`);
     }
 
     // Clean up the exam environment
     try {
-      await jumphostService.cleanupExamEnvironment(examId);
+      if (perSession) {
+        // Idempotent: also cleans a partially created stack whose env was
+        // never stored on the session.
+        await environmentService.destroyForSession(session);
+      } else {
+        await jumphostService.cleanupExamEnvironment(examId);
+      }
       
-      // Clear the current exam info 
-      await redisClient.deleteCurrentExamId();
+      // Only clear the global pointer if it still points at this exam.
+      if (currentExamId === examId) {
+        await redisClient.deleteCurrentExamId();
+      }
       await redisClient.deleteAllExamData(examId);
     } catch (cleanupError) {
       logger.error(`Error cleaning up exam environment for exam ${examId}`, {

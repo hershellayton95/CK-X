@@ -5,9 +5,24 @@ const cors = require('cors');
 const config = require('./config');
 const logger = require('./utils/logger');
 const redisClient = require('./utils/redisClient');
+const environmentService = require('./services/environmentService');
+const sessionService = require('./services/sessionService');
+const sessionReaper = require('./services/sessionReaper');
+const sessionMetrics = require('./utils/sessionMetrics');
+const { validateConfig } = require('./utils/validateConfig');
+
+// Fail before binding the port when multisession secrets are missing/weak in
+// production. In development this only logs warnings.
+try {
+  validateConfig();
+} catch (error) {
+  logger.error(error.message);
+  process.exit(1);
+}
 
 // Import routes
 const sshRoutes = require('./routes/sshRoutes');
+const sessionRoutes = require('./routes/sessionRoutes');
 const examRoutes = require('./routes/examRoutes');
 const assessmentRoutes = require('./routes/assessmentRoutes');
 const remoteDesktopRoutes = require('./routes/remoteDesktopRoutes');
@@ -30,6 +45,7 @@ app.use(morgan('combined', {
 
 // API routes
 app.use('/api/v1', sshRoutes);
+app.use('/api/v1/sessions', sessionRoutes);
 app.use('/api/v1/exams', examRoutes);
 app.use('/api/v1/assements', assessmentRoutes);
 app.use('/api/v1/remote-desktop', remoteDesktopRoutes);
@@ -65,6 +81,24 @@ app.use((err, req, res, next) => {
   try {
     await redisClient.connect();
     logger.info('Redis connected successfully');
+
+    // Remove data-plane stacks left behind by a crash/restart. Runs only in
+    // multisession mode, where the facilitator owns those stacks.
+    if (config.multisession.enabled) {
+      try {
+        await environmentService.reconcile();
+      } catch (error) {
+        logger.error(`Environment reconciliation failed: ${error.message}`);
+      }
+
+      try {
+        sessionMetrics.setActiveSessions(await sessionService.countActiveSessions());
+      } catch (error) {
+        logger.debug(`Could not initialise active session gauge: ${error.message}`);
+      }
+
+      sessionReaper.start();
+    }
   } catch (error) {
     logger.error(`Redis connection failed: ${error.message}`);
   }

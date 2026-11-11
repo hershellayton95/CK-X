@@ -23,22 +23,33 @@ const MetricService = require('./metricService');
  * 
  * @param {string} examId - The ID of the exam to prepare
  * @param {number} nodeCount - The number of nodes to prepare (default: 1)
+ * @param {Object} [options]
+ * @param {Object} [options.env] - Per-session environment descriptor; when set
+ *   the command runs against that session's jumphost and the shared VNC
+ *   session is not restarted (each session has its own desktop container)
+ * @param {boolean} [options.skipVncRestart=false]
  * @returns {Promise<Object>} Result object with success status and data
  */
-async function setupExamEnvironment(examId, nodeCount = 1) {
+async function setupExamEnvironment(examId, nodeCount = 1, options = {}) {
+  const env = options.env || null;
+  const sshOptions = env && env.jumphostHost ? { host: env.jumphostHost } : {};
+
   try {
     // Update exam status to PREPARING
     await redisClient.persistExamStatus(examId, 'PREPARING');
     logger.info(`Started preparing environment for exam ${examId} with ${nodeCount} nodes`);
     
-    //restart vnc session
-    await remoteDesktopService.restartVncSession();
+    // Legacy single-environment mode shares one desktop container, so the VNC
+    // session must be restarted between exams. Per-session stacks start fresh.
+    if (!env && !options.skipVncRestart) {
+      await remoteDesktopService.restartVncSession();
+    }
 
     // Execute the prepare-exam-env command on the jumphost
     const command = `prepare-exam-env ${nodeCount} ${examId}`;
     
     logger.info(`Executing command on jumphost: ${command}`);
-    const result = await sshService.executeCommand(command);
+    const result = await sshService.executeCommand(command, sshOptions);
     
     logger.info('Command : prepare-exam-env, host: jumphost, result', { exitCode: result.exitCode });
     logger.info(result.stdout);
@@ -105,9 +116,12 @@ async function setupExamEnvironment(examId, nodeCount = 1) {
  * resources used by the exam. It also updates the exam status in Redis.
  * 
  * @param {string} examId - The ID of the exam to clean up
+ * @param {Object} [env] - Per-session environment descriptor
  * @returns {Promise<Object>} Result object with success status and data
  */
-async function cleanupExamEnvironment(examId) {
+async function cleanupExamEnvironment(examId, env = null) {
+  const sshOptions = env && env.jumphostHost ? { host: env.jumphostHost } : {};
+
   try {
     // Update exam status to CLEANING_UP
     await redisClient.persistExamStatus(examId, 'CLEANING_UP');
@@ -118,7 +132,7 @@ async function cleanupExamEnvironment(examId) {
     const command = 'cleanup-exam-env';
     
     logger.info(`Executing command on jumphost: ${command}`);
-    const result = await sshService.executeCommand(command);
+    const result = await sshService.executeCommand(command, sshOptions);
 
     logger.info('Command : cleanup-exam-env, host: jumphost, result', { exitCode: result.exitCode });
     logger.info(result.stdout);
@@ -188,9 +202,13 @@ async function cleanupExamEnvironment(examId) {
  * 
  * @param {string} examId - The ID of the exam to evaluate
  * @param {Array} questions - Array of questions with verification steps
+ * @param {Object} [mcqAnswers={}] - Multiple-choice answers keyed by question ID
+ * @param {Object} [env] - Per-session environment descriptor
  * @returns {Promise<Object>} Result object with evaluation data
  */
-async function evaluateExamOnJumphost(examId, questions, mcqAnswers = {}) {
+async function evaluateExamOnJumphost(examId, questions, mcqAnswers = {}, env = null) {
+  const sshOptions = env && env.jumphostHost ? { host: env.jumphostHost } : {};
+
   try {
     let totalScore = 0;
     let totalPossibleScore = 0;
@@ -260,7 +278,7 @@ async function evaluateExamOnJumphost(examId, questions, mcqAnswers = {}) {
           const commandWithKubeconfig = `export KUBECONFIG=/home/candidate/.kube/kubeconfig && ${scriptPath}`;
           
           logger.info(`Executing verification script: ${scriptPath} with KUBECONFIG set`);
-          const result = await sshService.executeCommand(commandWithKubeconfig);
+          const result = await sshService.executeCommand(commandWithKubeconfig, sshOptions);
           
           // Determine if the verification passed
           const isValid = result.exitCode === 0;
