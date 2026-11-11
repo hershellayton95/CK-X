@@ -10,7 +10,6 @@ const logger = require('../utils/logger');
 const redisClient = require('../utils/redisClient');
 const jumphostService = require('./jumphostService');
 const environmentService = require('./environmentService');
-const MetricService = require('./metricService');
 
 /**
  * Create a new exam
@@ -83,15 +82,6 @@ async function createExam(examData, options = {}) {
       }
     }
     
-    // send metrics to metric server
-    MetricService.sendMetrics(examId, {
-      category: examData.category,
-      labId: examData.config.lab,
-      examName: examData.name,
-      event: {
-        userAgent: examData.userAgent
-      }
-    });
 
     return {
       success: true,
@@ -404,11 +394,6 @@ async function evaluateExam(examId, evaluationData, options = {}) {
     // Update exam status to EVALUATING
     await redisClient.updateExamStatus(examId, 'EVALUATING');
 
-    MetricService.sendMetrics(examId, {
-      event: {
-        examEvaluationState: 'EVALUATING'
-      }
-    });
     
     // Get assessment path information
     const assetPath = examInfo.assetPath;

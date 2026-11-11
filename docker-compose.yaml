@@ -228,7 +228,6 @@ services:
       - LOG_LEVEL=info
       - REDIS_HOST=redis
       - REDIS_PORT=6379
-      - TRACK_METRICS=true # based on the environment variable TRACK_METRICS, the facilitator will send metrics to the metric server
       # Multisession (see docs/multisession.md). Flag defaults to false so the
       # current single-environment flow is unchanged.
       - MULTISESSION_ENABLED=${MULTISESSION_ENABLED:-false}
