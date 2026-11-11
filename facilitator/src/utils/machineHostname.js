@@ -4,7 +4,7 @@
  * The jumphost itself is per session (or one container in single-environment
  * mode), but its visible name follows the certification so CKA candidates see
  * `cka9999`, CKAD candidates see `ckad9999`, and so on. Every session network
- * also aliases the other names so old lab content keeps working.
+ * also aliases the legacy `ckad9999` name so old lab content keeps working.
  */
 
 const HOSTNAME_BY_CATEGORY = {
@@ -30,6 +30,5 @@ function machineHostname(category) {
 
 module.exports = {
   machineHostname,
-  machineHostnames: Object.values(HOSTNAME_BY_CATEGORY),
   DEFAULT_MACHINE_HOSTNAME
 };

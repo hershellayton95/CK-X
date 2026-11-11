@@ -229,6 +229,13 @@ Secret rotation:
   existing jumphosts keep the old value and asset downloads fail; reap/restart
   those sessions (or restart the stack) to pick up the new token.
 
+Upgrades:
+
+- Per-session hostnames are fixed when the stack is created, while question
+  text comes from the current assets. After changing category hostnames (or the
+  compose network aliases), terminate active sessions and start them again;
+  otherwise an old stack keeps the previous hostname until it is reaped.
+
 ## Troubleshooting
 
 | Symptom | Check |

@@ -1,12 +1,3 @@
-x-machine-hostnames: &machine-hostnames
-  - cka9999
-  - ckad9999
-  - cks9999
-  - kcna9999
-  - kcsa9999
-  - playground9999
-  - other9999
-
 services:
   # VNC Server (Ubuntu)
   remote-desktop:
@@ -104,8 +95,8 @@ services:
       - ckx-network
 
   # Jump Host. The name follows the certification (cka9999 for CKA, ckad9999
-  # for CKAD, ...); all names below are aliased to the same container so old
-  # lab instructions keep resolving.
+  # for CKAD, ...). `ckad9999` stays aliased for older lab text; the category
+  # name itself resolves from `hostname`.
   jumphost:
     image: ckx/ck-x-jumphost:${SESSION_IMAGE_TAG:-dev}
     build:
@@ -130,7 +121,8 @@ services:
           memory: 512M
     networks:
       ckx-network:
-        aliases: *machine-hostnames
+        aliases:
+          - ckad9999
     healthcheck:
       test: ["CMD", "nc", "-z", "localhost", "22"]
       interval: 10s

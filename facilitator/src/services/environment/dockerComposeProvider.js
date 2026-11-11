@@ -13,6 +13,7 @@ const os = require('os');
 const path = require('path');
 const config = require('../../config');
 const logger = require('../../utils/logger');
+const { DEFAULT_MACHINE_HOSTNAME } = require('../../utils/machineHostname');
 
 const execFileAsync = promisify(execFile);
 
@@ -70,7 +71,7 @@ function composeEnv({ sessionId, vncPassword, terminalPassword, machineHostname 
     ...process.env,
     SESSION_ID: sessionId,
     SESSION_CLUSTER_NAME: clusterName(sessionId),
-    SESSION_MACHINE_HOSTNAME: machineHostname || 'ckad9999',
+    SESSION_MACHINE_HOSTNAME: machineHostname || DEFAULT_MACHINE_HOSTNAME,
     SESSION_IMAGE_TAG: config.multisession.sessionImageTag,
     FACILITATOR_URL: config.multisession.facilitatorUrl,
     INTERNAL_TOKEN: config.multisession.internalToken || '',
@@ -198,7 +199,7 @@ async function createSession({ sessionId, examId, vncPassword, terminalPassword,
     composeFile: file,
     network: networkName(sessionId),
     clusterName: clusterName(sessionId),
-    machineHostname: machineHostname || 'ckad9999',
+    machineHostname: machineHostname || DEFAULT_MACHINE_HOSTNAME,
     jumphostHost: containerName(sessionId, 'jumphost'),
     remoteDesktopHost: containerName(sessionId, 'remote-desktop'),
     remoteDesktopPort: 6901,
