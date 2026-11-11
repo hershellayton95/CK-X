@@ -92,7 +92,11 @@ services:
       - VNC_RESOLUTION=1280x800
     labels: *ckx-labels
     networks:
+      # Shared control network for browser routing, plus this session's own
+      # network so the desktop can reach its jumphost (cka9999/ckad9999/...)
+      # and cluster API, matching the single-environment layout.
       - sessions
+      - session
     deploy:
       resources:
         limits:
@@ -119,7 +123,10 @@ services:
       - REMOTE_TERMINAL_PASSWORD=${TERMINAL_PASSWORD:-}
     labels: *ckx-labels
     networks:
+      # Shared control network for the webapp, plus this session's own network
+      # so `ssh candidate@<category>9999` works from the browser terminal.
       - sessions
+      - session
     deploy:
       resources:
         limits:
