@@ -1,4 +1,4 @@
-FROM node:18-alpine
+FROM node:22-alpine
 
 # Create app directory
 WORKDIR /usr/src/app
@@ -11,9 +11,8 @@ RUN apk add --no-cache openssh-client docker-cli docker-cli-compose
 # A wildcard is used to ensure both package.json AND package-lock.json are copied
 COPY package*.json ./
 
-# Install dependencies
-# package-lock.json is not tracked in this repo, so `npm ci` cannot be used here
-RUN npm install --omit=dev
+# Install dependencies from the tracked lockfile so builds are reproducible.
+RUN npm ci --omit=dev
 
 # Bundle app source
 COPY . .
