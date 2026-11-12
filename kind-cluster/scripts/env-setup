@@ -138,6 +138,14 @@ echo "Kubeconfig file created: /home/candidate/.kube/kubeconfig"
 # Save kubeconfig and set API server address
 sed -i 's|server: https://127\.0\.0\.1:\([0-9]*\)|server: https://k8s-api-server:\1|' /home/candidate/.kube/kubeconfig
 
+# `k3d cluster create` also merges the cluster into the default kubeconfig
+# (~/.kube/config), which shares this volume with the jumphost and still
+# points at 127.0.0.1. Rewrite it too, so kubectl works from shells that do
+# not export KUBECONFIG.
+if [ -f /home/candidate/.kube/config ]; then
+  sed -i 's|server: https://127\.0\.0\.1:\([0-9]*\)|server: https://k8s-api-server:\1|' /home/candidate/.kube/config
+fi
+
 echo "Kubeconfig file content:"
 cat /home/candidate/.kube/kubeconfig
 

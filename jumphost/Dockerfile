@@ -97,6 +97,9 @@ EXPOSE 22
 
 RUN echo "export TERM=xterm" >> /home/candidate/.bashrc
 RUN echo "export KUBECONFIG=/home/candidate/.kube/kubeconfig" >> /home/candidate/.bashrc
+# Login shells get the same variable even when they do not source .bashrc.
+RUN echo "export KUBECONFIG=/home/candidate/.kube/kubeconfig" > /etc/profile.d/ckx-kubeconfig.sh && \
+    chmod 644 /etc/profile.d/ckx-kubeconfig.sh
 RUN echo "PS1='\[\e[32m\]\u@\h:\w\$ \[\e[0m\]'" >> /home/candidate/.bashrc
 
 #set kubectl autocompletion
