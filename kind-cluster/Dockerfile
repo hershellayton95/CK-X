@@ -1,4 +1,4 @@
-FROM docker:dind
+FROM docker:29.9.3-dind
 
 # Accept build-time architecture argument
 ARG TARGETARCH
@@ -22,9 +22,7 @@ RUN chmod +x /usr/local/bin/k3d-install.sh
 
 ENV KIND_DEFAULT_VERSION=v1.32.3
 
-RUN apk add --no-cache openssh-server
-RUN apk add bash 
-RUN apk add openssh-server-pam
+RUN apk add --no-cache openssh-server bash openssh-server-pam
 
 RUN ssh-keygen -A
 
