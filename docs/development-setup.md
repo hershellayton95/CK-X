@@ -75,6 +75,9 @@ Private packages need `docker login ghcr.io` first; public packages need
 nothing. The facilitator forwards `CKX_REGISTRY` into the per-session compose,
 so session stacks pull from the same registry.
 
+Each image is scanned with Trivy inside the publish workflow. The build fails
+on fixable `CRITICAL` CVEs, and unfixed ones are reported without blocking.
+
 ## Accessing the Application
 
 ### 1. Web Interface
